@@ -88,7 +88,7 @@ predicted_trajectory = predict_trajectory(data_points)
 # Save predictions to a file
 with open("prediction.txt", "w") as file:
     for point in predicted_trajectory:
-        file.write(f"{tuple(map(float, point))}\n")
+        file.write(f"{tuple(map(float, point))},\n")
 
 # Plot the trajectory
 z_coords = [point[2] for point in predicted_trajectory]

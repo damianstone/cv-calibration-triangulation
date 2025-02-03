@@ -1,3 +1,16 @@
+import bpy
+
+# Clear existing animation data
+bpy.ops.object.select_all(action='DESELECT')
+ball = bpy.data.objects['TennisBall']  # Replace with your ball object name
+ball.animation_data_clear()
+
+# Frame and time settings
+start_frame = 1
+frame_increment = 1
+
+# Coordinates list
+coordinates = [
 (3.0, -11.5, 1.0),
 (2.88, -11.25, 1.06),
 (2.77, -11.0, 1.13),
@@ -91,4 +104,18 @@
 (2.8454074063263763, 7.624238325322461, 0.5577959197948982),
 (2.924709702311725, 7.780528227666103, 0.5479919779032688),
 (3.004953676149487, 7.935532033097538, 0.5355033578229373),
-(3.086122154247231, 8.089251376453808, 0.5203409423091027),
+(3.086122154247231, 8.089251376453808, 0.5203409423091027)
+]
+
+# Animate through each point
+for i, (x, y, z) in enumerate(coordinates):
+    frame_number = start_frame + i * frame_increment
+    ball.location = (x, y, z)  # Set the ball's location
+    ball.keyframe_insert(data_path="location", frame=frame_number)
+
+# Optional: Set interpolation to linear for smooth movement
+for fcurve in ball.animation_data.action.fcurves:
+    for keyframe in fcurve.keyframe_points:
+        keyframe.interpolation = 'LINEAR'
+
+print("Animation complete!")
