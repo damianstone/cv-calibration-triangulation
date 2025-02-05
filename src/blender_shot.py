@@ -5,7 +5,6 @@ bpy.ops.object.select_all(action='DESELECT')
 ball = bpy.data.objects['TennisBall']  # Replace with your ball object name
 ball.animation_data_clear()
 
-# Frame and time settings
 start_frame = 1
 frame_increment = 1
 
