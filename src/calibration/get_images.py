@@ -1,29 +1,44 @@
+"""
+Open two webcams and save images from them to use for stereo calibration
+If not checboard, then use: https://www.kaggle.com/datasets/danielwe14/stereocamera-chessboard-pictures?resource=download
+"""
+
 import cv2
+import numpy as np
+import os
 
-cap = cv2.VideoCapture(0)
-cap2 = cv2.VideoCapture(2)
+cap = cv2.VideoCapture(0, cv2.CAP_AVFOUNDATION)
 
-num = 0
+num = 0 
 
 while cap.isOpened():
+    success, frame = cap.read()
+    if not success:
+        break
 
-    succes1, img1 = cap.read()
-    success2, img2 = cap2.read()
 
+    frame = cv2.resize(frame, (640, 480))
+
+    # Simulate stereo by splitting into left and right images
+    width = frame.shape[1] // 2
+    imgL = frame[:, :width]  # Left half
+    imgR = frame[:, width:]  # Right half
+
+    # Display images
+    cv2.imshow("Stereo Left", imgL)
+    cv2.imshow("Stereo Right", imgR)
+
+    # Key event handling
     k = cv2.waitKey(5)
 
-    if k == 27:
+    if k == 27:  # ESC to exit
         break
-    elif k == ord('s'): # wait for 's' key to save and exit
-        cv2.imwrite('images/stereoLeft/imageL' + str(num) + '.png', img1)
-        cv2.imwrite('images/stereoRight/imageR' + str(num) + '.png', img2)
-        print("image saved!")
+    elif k == ord('s'):  # Save images when 's' is pressed
+        cv2.imwrite(f'images/stereoLeft/imageL{num}.png', imgL)
+        cv2.imwrite(f'images/stereoRight/imageR{num}.png', imgR)
+        
+        print(f"Images saved! imageL{num}.png and imageR{num}.png")
         num += 1
 
-    cv2.imshow('Img1',img1)
-    cv2.imshow('Img2',img2)
-
-# Release and destroy all windows before termination
 cap.release()
-
 cv2.destroyAllWindows()
