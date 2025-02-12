@@ -16,7 +16,6 @@ while cap.isOpened():
     if not success:
         break
 
-
     frame = cv2.resize(frame, (640, 480))
 
     # Simulate stereo by splitting into left and right images
