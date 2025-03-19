@@ -12,18 +12,20 @@ gravity = 9.81  # acceleration due to gravity (m/s^2)
 mass = 0.0594  # mass of a tennis ball (kg)
 radius = 0.0335  # radius of the ball (m)
 dt = 1 / 60  # time interval between frames (s)
-time_horizon = 3.0 # prediction duration (s)
+time_horizon = 3.0  # prediction duration (s)
 drag_coeff = 0.507  # drag coefficient
 air_density = 1.204  # air density (kg/m^3)
 cross_sectional_area = 0.00456  # cross-sectional area of the ball (m^2)
 spin_vector = np.array([0, 0, -1])  # spin vector of the ball
 num_predictions = int(time_horizon / dt)  # number of prediction points
 
+
 def restitution_coeff(v0, coeff_variance=0.07, exp_variance=0.1):
     """Calculate the coefficient of restitution based on initial velocity."""
     coefficient = 0.18 + np.random.uniform(-coeff_variance, coeff_variance)
     exponent = 0.5 + np.random.uniform(-exp_variance, exp_variance)
-    return max(1 - coefficient * v0 ** exponent, 0)
+    return max(1 - coefficient * v0**exponent, 0)
+
 
 def predict_trajectory(data_points):
     """Predict the trajectory of a tennis ball based on initial data points."""
@@ -50,8 +52,12 @@ def predict_trajectory(data_points):
 
         # Magnus (lift) force
         magnus_force = (
-            0.5 * air_density * cross_sectional_area * v**2 *
-            np.cross(spin_vector, [vx, vy, vz]) / np.linalg.norm([vx, vy, vz])
+            0.5
+            * air_density
+            * cross_sectional_area
+            * v**2
+            * np.cross(spin_vector, [vx, vy, vz])
+            / np.linalg.norm([vx, vy, vz])
         )
         magnus_acc = magnus_force / mass
 
@@ -74,12 +80,13 @@ def predict_trajectory(data_points):
 
     return trajectory
 
+
 # Initial data points
 data_points = [
     (3.0, -11.5, 1.0),
     (2.88, -11.25, 1.06),
     (2.77, -11, 1.13),
-    (2.65, -10.75, 1.2)
+    (2.65, -10.75, 1.2),
 ]
 
 # Predict trajectory
