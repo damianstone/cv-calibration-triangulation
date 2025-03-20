@@ -31,7 +31,14 @@ def select_uniform_frames(frames_list, n):
     indices = np.linspace(0, len(frames_list) - 1, n, dtype=int)
     return [frames_list[i] for i in indices]
 
-def process_stereo_videos(record_name, left_video_path, right_video_path, output_dir, pattern_size, num_frames, skip_seconds=1):
+def process_stereo_videos(
+    record_name, 
+    left_video_path, 
+    right_video_path, 
+    output_dir, 
+    pattern_size, 
+    num_frames, 
+    skip_seconds=1):
     # create the output folder if it doesn't exist
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
@@ -51,6 +58,8 @@ def process_stereo_videos(record_name, left_video_path, right_video_path, output
     
     # iterate through time, reading a frame from each video at the same timestamp
     for sec in range(0, duration_seconds):
+        # if len(detected_pairs) == 5:
+        #     break
         left_frame_no = int(sec * left_fps)
         right_frame_no = int(sec * right_fps)
         left_cap.set(cv2.CAP_PROP_POS_FRAMES, left_frame_no)
@@ -93,17 +102,17 @@ def process_stereo_videos(record_name, left_video_path, right_video_path, output
 if __name__ == "__main__":
     root = find_project_root()
     # cam 1
-    camera_a = "CAM_A_LEFT"
+    camera_a = "CAM_A_RIGHT"
     record_name = "1_stereo_view"
     left_video_path = f"{root}/videos/{camera_a}/{record_name}.MOV"
     
     # cam 2
-    camera_b = "CAM_B_LEFT"
+    camera_b = "CAM_B_RIGHT"
     record_name = "1_stereo_view"
     right_video_path = f"{root}/videos/{camera_b}/{record_name}.MOV"
 
     # output
-    output_path = f"{root}/images/cameras/stereo-left/STEREO"
+    output_path = f"{root}/images/cameras/stereo-right/STEREO"
 
     # pattern variables
     chessboard_size = (9, 6)
