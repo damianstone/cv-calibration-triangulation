@@ -101,10 +101,10 @@ if __name__ == "__main__":
     camera = "CAM_B_RIGHT"
     record_name = "cam_unique_view"
     root = find_project_root()
-    video_path = f"{root}/videos/{camera}/{record_name}.MOV"
+    video_path = f"{root}/videos/{record_name}.MOV"
 
     # output
-    output_path = f"{root}/images/cameras/stereo-right/CAM_B"
+    output_path = f"{root}/images/cameras/stereo-left/"
 
     # pattern variables
     chessboard_size = (9, 6)
