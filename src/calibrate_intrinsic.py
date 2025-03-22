@@ -36,7 +36,6 @@ def compute_reprojection_error(object_points, image_points, rvecs, tvecs, camera
     return np.sqrt(total_error / total_points)
 
 
-# TODO: make a way to store in a specific outout the filtered images used here below the threshold
 def filter_images_by_error(objpoints, imgpoints, rvecs, tvecs, K, D, threshold):
     filtered_obj = []
     filtered_img = []
