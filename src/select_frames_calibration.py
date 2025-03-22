@@ -90,7 +90,7 @@ def process_video(
     
     for idx, (frame_no, frame) in enumerate(selected_frames):
         output_path = os.path.join(output_dir, f"frame_{record_name}_{frame_no:04d}.png")
-        cv2.imwrite(output_path, frame)
+        cv2.imwrite(output_path, frame, [cv2.IMWRITE_PNG_COMPRESSION, 0])
         print(f"saved frame {frame_no} to {output_path}")
 
     print(f"total frames detected: {len(detected_frames)}")
