@@ -2,6 +2,20 @@
 
 All the folders inside `src/` (e.g. `src/get-intrinsic-params/` ) as they are just notebooks for testing with public data and for learning about calibration
 
+## Start
+
+```bash
+python3 -m venv venv-tp
+```
+
+```bash
+source venv-tp/bin/activate
+```
+
+```bash
+pip install -r requirements.txt
+```
+
 ## Main scripts
 
 `select_frames_calibration.py` -> to get the frames used for intrinsic calibration for each camera. It process each video and select frames where the chessboard is visible
