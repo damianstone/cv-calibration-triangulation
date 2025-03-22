@@ -21,9 +21,10 @@ def find_project_root(marker=".gitignore"):
 
 def compute_reprojection_error(object_points, image_points, rvecs, tvecs, camera_matrix, dist_coeffs):
     """
-    average error between where the calibration model predicts the chessboard corners 
-    should appear (after projecting 3D points into 2D) and where they were actually detected. 
-    A lower error means a more accurate calibration.
+    how close our predicted positions of the chessboard corners are to where they actually appear in the picture. 
+    if the difference is small, it means our calibration are very accurate
+    
+    rule = less than 1.0 is good 
     """
     total_error = 0
     total_points = 0
