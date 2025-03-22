@@ -17,7 +17,6 @@ def find_project_root(marker=".gitignore"):
     )
 
 def upscale_image(image, scale_factor=2):
-    # makes the image larger to reveal more details
     return cv2.resize(image, None, fx=scale_factor, fy=scale_factor, interpolation=cv2.INTER_CUBIC)
 
 def detect_chessboard(frame, pattern_size, upscale_factor=2):
@@ -30,17 +29,15 @@ def detect_chessboard(frame, pattern_size, upscale_factor=2):
         corners = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), criteria)
         return ret, corners
 
-    # TODO: 2. try upscaling the image
-    upscaled = upscale_image(gray, scale_factor=upscale_factor)
-    cv2.imshow("UPSCALED", upscaled) 
-    cv2.waitKey(1) 
-    ret, corners = cv2.findChessboardCorners(upscaled, pattern_size, flags)
-    if ret:
-        # adjust coordinates back to the original scale
-        corners = corners / upscale_factor
-        criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
-        corners = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), criteria)
-        return ret, corners
+    # # TODO: 2. try upscaling the image
+    # upscaled = upscale_image(gray, scale_factor=upscale_factor)
+    # ret, corners = cv2.findChessboardCorners(upscaled, pattern_size, flags)
+    # if ret:
+    #     # adjust coordinates back to the original scale
+    #     corners = corners / upscale_factor
+    #     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
+    #     corners = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), criteria)
+    #     return ret, corners
 
     return None, None
 
@@ -97,24 +94,36 @@ def process_video(
     print(f"selected {len(selected_frames)} frames for calibration dataset.")
 
 if __name__ == "__main__":
-    # input
-    camera = "CAM_B_RIGHT"
-    record_name = "cam_unique_view"
     root = find_project_root()
-    video_path = f"{root}/videos/{record_name}.MOV"
-
-    # output
-    output_path = f"{root}/images/cameras/stereo-left/"
-
+    base_folder = f"{root}/images/cameras"
+    
+    left_cam_a = f"{root}/videos/CAM_A_LEFT/cam_unique_view.MOV"
+    left_cam_b = f"{root}/videos/CAM_B_LEFT/cam_unique_view.MOV"
+    right_cam_a = f"{root}/videos/CAM_A_RIGHT/cam_unique_view.MOV"
+    right_cam_b = f"{root}/videos/CAM_B_RIGHT/cam_unique_view.MOV"
+    
+    videos = [left_cam_a, left_cam_b, right_cam_a, right_cam_b]
+    
+    cameras_output_paths = {
+        "LEFT_CAM_A": os.path.join(base_folder, "stereo-left", "V2_CAM_A"),
+        "LEFT_CAM_B": os.path.join(base_folder, "stereo-left", "V2_CAM_B"),
+        "RIGHT_CAM_A": os.path.join(base_folder, "stereo-right", "V2_CAM_A"),
+        "RIGHT_CAM_B": os.path.join(base_folder, "stereo-right", "V2_CAM_B")
+    }
+    
     # pattern variables
     chessboard_size = (9, 6)
     square_size_mm = 60
-
-    process_video(
-        record_name=record_name,
-        video_path=video_path,
-        output_dir=output_path,
-        pattern_size=chessboard_size,
-        num_frames=50,
-        skip_seconds=1
-    )
+    
+    i = 0
+    for cam_name, folder in cameras_output_paths.items():
+        process_video(
+            record_name=cam_name,
+            video_path=videos[i],
+            output_dir=folder,
+            pattern_size=chessboard_size,
+            num_frames=50,
+            skip_seconds=1
+        )
+        print(f"--------------------------- {cam_name} DONE ---------------------------")
+        i += 1

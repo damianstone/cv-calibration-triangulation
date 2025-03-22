@@ -77,6 +77,9 @@ def calibrate_camera_from_folder(folder, chessboard_size, square_size_mm):
     for cam_img in images:
         img = cv2.imread(cam_img)
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        
+        # TODO: make a way to don't count frames that have high reprojection error, check if the imahe
+        # have more than 1 reprojection error, if its less then count it for the general calibration if not just skip
 
         # find the chessboard corners
         ret, corners = cv2.findChessboardCorners(gray, chessboard_size, None)
@@ -148,10 +151,10 @@ def save_intrinsics_to_json(intrinsics_dict, output_path):
 
 def process_intrinsic(base_folder, output_path, chessboard_size, square_size_mm):
     cameras = {
-        "LEFT_CAM_A": os.path.join(base_folder, "stereo-left", "CAM_A"),
-        "LEFT_CAM_B": os.path.join(base_folder, "stereo-left", "CAM_B"),
-        "RIGHT_CAM_A": os.path.join(base_folder, "stereo-right", "CAM_A"),
-        "RIGHT_CAM_B": os.path.join(base_folder, "stereo-right", "CAM_B")
+        "LEFT_CAM_A": os.path.join(base_folder, "stereo-left", "V2_CAM_A"),
+        "LEFT_CAM_B": os.path.join(base_folder, "stereo-left", "V2_CAM_B"),
+        "RIGHT_CAM_A": os.path.join(base_folder, "stereo-right", "V2_CAM_A"),
+        "RIGHT_CAM_B": os.path.join(base_folder, "stereo-right", "V2_CAM_B")
     }
     intrinsics = {}
     for cam_name, folder in cameras.items():
@@ -187,7 +190,7 @@ def process_intrinsic(base_folder, output_path, chessboard_size, square_size_mm)
 if __name__ == "__main__":
     root = find_project_root()
     base_path = f"{root}/images/cameras"
-    output_path = f"{root}/output/intrinsic_params.json"
+    output_path = f"{root}/output/intrinsic_params_2.json"
     chessboard_size = (9, 6)
     square_size_mm = 60
     process_intrinsic(base_path, output_path, chessboard_size, square_size_mm)
