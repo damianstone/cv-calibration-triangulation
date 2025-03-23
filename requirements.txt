@@ -3,3 +3,5 @@ matplotlib
 opencv-python
 flake8
 flake8-black
+tqdm
+pyav
