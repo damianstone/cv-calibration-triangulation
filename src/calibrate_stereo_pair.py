@@ -62,24 +62,21 @@ def check_frame_size(img, expected_size=None):
         print(f"Error: Image size {current_size} does not match expected {expected_size}")
     return expected_size
 
-def detect_chessboard(frame, pattern_size):
+def detect_chessboard(frame, pattern_size, winSize, criteria):
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     # use adaptive threshold and normalization flags for better detection
     flags = cv2.CALIB_CB_ADAPTIVE_THRESH | cv2.CALIB_CB_NORMALIZE_IMAGE
     ret, corners = cv2.findChessboardCorners(gray, pattern_size, flags)
     if ret:
-        # stricter termination criteria for improved subpixel refinement
-        criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 50, 0.0001)
-        corners = cv2.cornerSubPix(gray, corners, (7, 7), (-1, -1), criteria)
+        corners = cv2.cornerSubPix(gray, corners, winSize, (-1, -1), criteria)
+        
     return ret, corners
 
 def compute_reprojection_error_pair(objp, corners, K, D):
-    # Estimate pose for the single image
     ret, rvec, tvec = cv2.solvePnP(objp, corners, K, D)
     proj, _ = cv2.projectPoints(objp, rvec, tvec, K, D)
     error = cv2.norm(corners, proj, cv2.NORM_L2) / len(objp)
     return error
-
 
 def calibrate_stereo_from_folder(
         folder,
@@ -129,17 +126,10 @@ def calibrate_stereo_from_folder(
         gray_left = cv2.cvtColor(left_img, cv2.COLOR_BGR2GRAY)
         gray_right = cv2.cvtColor(right_img, cv2.COLOR_BGR2GRAY)
 
-        # ret_left, corners_left = cv2.findChessboardCorners(gray_left, chessboard_size, None)
-        # ret_right, corners_right = cv2.findChessboardCorners(gray_right, chessboard_size, None)
-        ret_left, corners_left = detect_chessboard(left_img, chessboard_size)
-        ret_right, corners_right = detect_chessboard(right_img, chessboard_size)
+        ret_left, corners_left = detect_chessboard(left_img, chessboard_size, winSize, criteria)
+        ret_right, corners_right = detect_chessboard(right_img, chessboard_size, winSize, criteria)
         if ret_left and ret_right:
-            corners_left = cv2.cornerSubPix(
-                gray_left, corners_left, winSize, zeroZone, criteria)
-            corners_right = cv2.cornerSubPix(
-                gray_right, corners_right, winSize, zeroZone, criteria)
-
-            # Compute error for each image individually using solvePnP
+            # compute error for each image individually using solvePnP
             error_l = compute_reprojection_error_pair(objp, corners_left, K_left, D_left)
             error_r = compute_reprojection_error_pair(objp, corners_right, K_right, D_right)
             avg_error = (error_l + error_r) / 2.0
