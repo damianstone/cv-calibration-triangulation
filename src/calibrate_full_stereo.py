@@ -50,6 +50,27 @@ def detect_chessboard(frame, pattern_size):
     return ret, corners
 
 
+def apply_global_transformation_to_extrinsics(extrinsics, full_stereo_params):
+    # full_stereo_params computed from left A to right A.
+    # We invert it to map right extrinsics into left system.
+    R_full, _ = cv2.Rodrigues(np.array(full_stereo_params["rotation_vector"]))
+    t_full = np.array(full_stereo_params["translation_vector"]).reshape(3, 1)
+    R_inv = R_full.T
+    t_inv = -R_inv @ t_full
+
+    updated_extrinsics = {}
+    for cam, params in extrinsics.items():
+        R_cam, _ = cv2.Rodrigues(np.array(params["rvec"]))
+        t_cam = np.array(params["tvec"]).reshape(3, 1)
+        # New extrinsics: T_new = T_inv * T_cam
+        R_new = R_inv @ R_cam
+        t_new = R_inv @ (t_cam - t_full)
+        rvec_new, _ = cv2.Rodrigues(R_new)
+        updated_extrinsics[cam] = {"rvec": rvec_new.flatten().tolist(),
+                                   "tvec": t_new.flatten().tolist()}
+    return updated_extrinsics
+
+
 def calibrate_full_stereo_from_groups(groups_folder, chessboard_size, square_size_mm, intrinsics, stereo_extrinsics):
     objp = np.zeros((chessboard_size[0]*chessboard_size[1], 3), np.float32)
     objp[:, :2] = np.mgrid[0:chessboard_size[0], 0:chessboard_size[1]].T.reshape(-1, 2)
@@ -87,8 +108,7 @@ def calibrate_full_stereo_from_groups(groups_folder, chessboard_size, square_siz
             print("chessboard not found in one of the frames within a group")
             continue
 
-        # we only need camera from each stereo pair to compute how the board look between each stereo
-        # Including CAMERA B doesnt add much unless doing full bundle adjustment
+
         K_la = np.array(intrinsics["LEFT_CAM_A"]["K"])
         D_la = np.array(intrinsics["LEFT_CAM_A"]["D"])
 
@@ -147,26 +167,34 @@ if __name__ == "__main__":
     root = find_project_root()
     groups_folder = os.path.join(root, "images", "full-stereo", "GROUPS")
 
-    intrinsic_path = os.path.join(root, "output", "intrinsic_params.json")
-    with open(intrinsic_path, "r") as f:
+    with open(os.path.join(root, "output", "intrinsic_params.json"), "r") as f:
         intrinsics = json.load(f)
-
-    extrinsic_path = os.path.join(root, "output", "keep_best_stereo_params.json")
-    with open(extrinsic_path, "r") as f:
+    with open(os.path.join(root, "output", "keep_best_stereo_params.json"), "r") as f:
         stereo_extrinsics = json.load(f)
 
     chessboard_size = (9, 6)
     square_size_mm = 60
 
+    # Compute global transformation using left_a and right_a images.
     full_stereo_params = calibrate_full_stereo_from_groups(
-        groups_folder,
-        chessboard_size,
-        square_size_mm,
-        intrinsics,
-        stereo_extrinsics
-    )
+        groups_folder, chessboard_size, square_size_mm, intrinsics, stereo_extrinsics)
+    print("Global transformation:", full_stereo_params)
 
-    output_path = os.path.join(root, "output", "full_stereo_params.json")
+    # Update RIGHT cameras into the LEFT coordinate system.
+    updated_right = apply_global_transformation_to_extrinsics({
+        "RIGHT_CAM_A": stereo_extrinsics["RIGHT_CAM_A"],
+        "RIGHT_CAM_B": stereo_extrinsics["RIGHT_CAM_B"]
+    }, full_stereo_params)
 
-    save_json(full_stereo_params, output_path)
-    print("Full stereo calibration parameters saved to", output_path)
+    # Global extrinsics for all cameras.
+    global_extrinsics = {
+        "LEFT_CAM_A": stereo_extrinsics["LEFT_CAM_A"],
+        "LEFT_CAM_B": stereo_extrinsics["LEFT_CAM_B"],
+        "RIGHT_CAM_A": updated_right["RIGHT_CAM_A"],
+        "RIGHT_CAM_B": updated_right["RIGHT_CAM_B"]
+    }
+
+    # Save global extrinsics.
+    output_path = os.path.join(root, "output", "global_extrinsics.json")
+    save_json(global_extrinsics, output_path)
+    print("Global extrinsics saved to", output_path)
