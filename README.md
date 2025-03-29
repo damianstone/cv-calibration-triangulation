@@ -59,3 +59,57 @@ if __name__ == "__main__":
     )
 
 ```
+
+### Fremes calibration folders
+From images/
+```bash
+STEREOS/
+    STEREO_A/
+        stereo_frames/
+            0000/
+                cam_1.png
+                cam_2.png
+            0001/
+            0002/
+        filtered_stereo_frames/
+            0001/
+            0002/
+        CAMERA_1/
+            intrinsic_frames/
+            filtered_intrinsic_frames/
+        CAMERA_2/
+            intrinsic_frames/
+            filtered_intrinsic_frames/
+    STEREO_B/
+        stereo_frames/
+            0000/
+                cam_2.png
+                cam_3.png
+            0001/
+            0002/
+        filtered_stereo_frames/
+            0001/
+            0002/
+        CAMERA_2/
+            intrinsic_frames/
+            filtered_intrinsic_frames/
+        CAMERA_3/
+            intrinsic_frames/
+            filtered_intrinsic_frames/
+```
+
+### Video calibration folders
+From videos/
+```bash
+STEREOS/
+    STEREO_A/
+        1_camera_intrinsic.MOV
+        1_camera_extrinsic.MOV
+        2_camera_intrinsic.MOV
+        2_camera_extrinsic.MOV
+    STEREO_B/
+        3_camera_intrinsic.MOV
+        3_camera_extrinsic.MOV
+        4_camera_intrinsic.MOV
+        4_camera_extrinsic.MOV
+```

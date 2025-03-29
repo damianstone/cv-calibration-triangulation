@@ -25,7 +25,7 @@ def detect_chessboard(frame, pattern_size):
     ret, corners = cv2.findChessboardCorners(gray, pattern_size, flags)
     if ret:
         criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
-        corners = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), criteria)
+        corners = cv2.cornerSubPix(gray, corners, (5, 5), (-1, -1), criteria)
     return ret, corners
 
 
@@ -37,8 +37,8 @@ def select_uniform_frames(frames_list, n):
 
 
 def process_stereo_videos(
-        cam_a,
-        cam_b,
+        cam_1,
+        cam_2,
         output_dir,
         pattern_size,
         num_frames,
@@ -48,47 +48,47 @@ def process_stereo_videos(
         os.makedirs(output_dir)
 
     # open both video files
-    left_cap = cv2.VideoCapture(cam_a)
-    right_cap = cv2.VideoCapture(cam_b)
+    cam_1_cap = cv2.VideoCapture(cam_1)
+    cam_2_cap = cv2.VideoCapture(cam_2)
     
-    left_fps = left_cap.get(cv2.CAP_PROP_FPS)
-    right_fps = right_cap.get(cv2.CAP_PROP_FPS)
+    cam_1_fps = cam_1_cap.get(cv2.CAP_PROP_FPS)
+    cam_2_fps = cam_2_cap.get(cv2.CAP_PROP_FPS)
     
-    left_total_frames = int(left_cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    right_total_frames = int(right_cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    cam_1_total_frames = int(cam_1_cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    cam_2_total_frames = int(cam_2_cap.get(cv2.CAP_PROP_FRAME_COUNT))
     
-    left_duration = int(left_total_frames / left_fps)
-    right_duration = int(right_total_frames / right_fps)
+    cam_1_duration = int(cam_1_total_frames / cam_1_fps)
+    cam_2_duration = int(cam_2_total_frames / cam_2_fps)
     
-    duration_seconds = min(left_duration, right_duration)
+    duration_seconds = min(cam_1_duration, cam_2_duration)
 
     detected_pairs = []
 
     # iterate through time, reading a frame from each video at the same timestamp
-    for sec in np.arange(0, duration_seconds, skip_seconds):
-        # if len(detected_pairs) == 5:
-        #     break
-        left_frame_no = int(sec * left_fps)
-        right_frame_no = int(sec * right_fps)
+    for sec in np.arange(0, duration_seconds):
+        if len(detected_pairs) == 5:
+            break
+        cam_1_frame_no = int(sec * cam_1_fps)
+        cam_2_frame_no = int(sec * cam_2_fps)
         
-        left_cap.set(cv2.CAP_PROP_POS_FRAMES, left_frame_no)
-        right_cap.set(cv2.CAP_PROP_POS_FRAMES, right_frame_no)
+        cam_1_cap.set(cv2.CAP_PROP_POS_FRAMES, cam_1_frame_no)
+        cam_2_cap.set(cv2.CAP_PROP_POS_FRAMES, cam_2_frame_no)
         
-        ret_left, left_frame = left_cap.read()
-        ret_right, right_frame = right_cap.read()
+        ret_cam_1, cam_1_frame = cam_1_cap.read()
+        ret_cam_2, cam_2_frame = cam_2_cap.read()
 
-        if not ret_left or not ret_right:
+        if not ret_cam_1 or not ret_cam_2:
             break
 
         # detect chessboard in both frames
-        found_left, _ = detect_chessboard(left_frame, pattern_size)
-        found_right, _ = detect_chessboard(right_frame, pattern_size)
-        if found_left and found_right:
-            detected_pairs.append((left_frame_no, left_frame, right_frame_no, right_frame))
+        found_cam_1, _ = detect_chessboard(cam_1_frame, pattern_size)
+        found_cam_2, _ = detect_chessboard(cam_2_frame, pattern_size)
+        if found_cam_1 and found_cam_2:
+            detected_pairs.append((cam_1_frame_no, cam_1_frame, cam_2_frame_no, cam_2_frame))
             print("Synchronized chessboard pair found:", len(detected_pairs))
 
-    left_cap.release()
-    right_cap.release()
+    cam_1_cap.release()
+    cam_2_cap.release()
 
     if not detected_pairs:
         print("No synchronized chessboard pairs found.")
@@ -98,14 +98,17 @@ def process_stereo_videos(
     selected_pairs = select_uniform_frames(detected_pairs, num_frames)
 
     # save each pair in its own folder with left and right images
-    for idx, (left_frame_no, left_frame, right_frame_no, right_frame) in enumerate(selected_pairs):
+    for idx, (cam_1_frame_no, cam_1_frame, cam_2_frame_no, cam_2_frame) in enumerate(selected_pairs):
         pair_folder = os.path.join(output_dir, f"{idx:03d}")
         os.makedirs(pair_folder, exist_ok=True)
-        left_path = os.path.join(pair_folder, f"left.png")
-        right_path = os.path.join(pair_folder, f"right.png")
-        cv2.imwrite(left_path, left_frame, [cv2.IMWRITE_PNG_COMPRESSION, 0])
-        cv2.imwrite(right_path, right_frame, [cv2.IMWRITE_PNG_COMPRESSION, 0])
-        print(f"Saved pair {idx}: left frame {left_frame_no}, right frame {right_frame_no}")
+        
+        cam_1_path = os.path.join(pair_folder, f"cam_1.png")
+        cam_2_path = os.path.join(pair_folder, f"cam_2.png")
+        
+        cv2.imwrite(cam_1_path, cam_1_frame, [cv2.IMWRITE_PNG_COMPRESSION, 0])
+        cv2.imwrite(cam_2_path, cam_2_frame, [cv2.IMWRITE_PNG_COMPRESSION, 0])
+        
+        print(f"Saved pair {idx}: left frame {cam_1_frame_no}, right frame {cam_2_frame_no}")
 
     print("Total pairs detected:", len(detected_pairs))
     print("Selected pairs for calibration:", len(selected_pairs))
@@ -113,18 +116,20 @@ def process_stereo_videos(
 
 if __name__ == "__main__":
     root = find_project_root()
-    base_folder = f"{root}/images/cameras"
+    base_folder = f"{root}/images/STEREOS"
+    videos_base_path = f"{root}/videos/STEREOS"
+    
+    cam_1 = f"{videos_base_path}/STEREO_A/1_cam_extrinsic.mp4"
+    cam_2 = f"{videos_base_path}/STEREO_A/2_cam_extrinsic.mp4"
+    
+    cam_3 = f"{videos_base_path}/STEREO_B/3_cam_extrinsic.mp4"
+    cam_4 = f"{videos_base_path}/STEREO_B/4_cam_extrinsic.mp4"
 
-    left_cam_a = f"{root}/videos/CAM_A_LEFT/1_stereo_view.MOV"
-    left_cam_b = f"{root}/videos/CAM_B_LEFT/1_stereo_view.MOV"
-    right_cam_a = f"{root}/videos/CAM_A_RIGHT/1_stereo_view.MOV"
-    right_cam_b = f"{root}/videos/CAM_B_RIGHT/1_stereo_view.MOV"
-
-    stereos = [(left_cam_a, left_cam_b), (right_cam_a, right_cam_b)]
+    stereos = [(cam_1, cam_2), (cam_3, cam_4)]
 
     cameras_output_paths = {
-        "STEREO_LEFT": os.path.join(base_folder, "stereo-left", "V2_STEREO"),
-        "STEREO_RIGHT": os.path.join(base_folder, "stereo-right", "V2_STEREO"),
+        "STEREO_A": os.path.join(base_folder, "STEREO_A", "stereo_frames"),
+        "STEREO_B": os.path.join(base_folder, "STEREO_B", "stereo_frames"),
     }
 
     # pattern variables
@@ -132,15 +137,15 @@ if __name__ == "__main__":
     square_size_mm = 60
 
     for i, (cam_name, folder) in enumerate(cameras_output_paths.items()):
-        if i != 1:
-          continue 
         stereo = stereos[i]
         process_stereo_videos(
-            cam_a=stereo[0],
-            cam_b=stereo[1],
+            cam_1=stereo[0],
+            cam_2=stereo[1],
             output_dir=folder,
             pattern_size=chessboard_size,
-            num_frames=150,
+            num_frames=200,
             skip_seconds=0.5
         )
         print(f"--------------------------- {cam_name} DONE ---------------------------")
+
+# remover 53 al final 4_cam
