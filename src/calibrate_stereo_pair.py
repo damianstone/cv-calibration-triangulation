@@ -8,16 +8,6 @@ from pathlib import Path
 from tqdm import tqdm
 from utils.utils import print_image
 
-"""
-How to improve extrinsic
-- get images again in better quality X
-- pre-process each image for better chessboard detection X
-- djust the corner refinement parameters -> WORKS
-        window size defines the area around an initially detected corner that the 
-        algorithm examines to refine its position
-- Fine-tuning detection parameters WORKS
-"""
-
 
 def find_project_root(marker=".gitignore"):
     current = Path.cwd()
@@ -37,6 +27,10 @@ def save_filtered_pairs(filtered_pairs, folder):
     filtered_folder = os.path.join(os.path.dirname(
         folder), "filtered_" + os.path.basename(folder))
 
+    # if folder exist, remove the content inside
+    if os.path.exists(filtered_folder):
+        shutil.rmtree(filtered_folder)
+
     if not os.path.exists(filtered_folder):
         os.makedirs(filtered_folder)
 
@@ -54,6 +48,48 @@ def save_filtered_pairs(filtered_pairs, folder):
     print("Filtered pairs saved to", filtered_folder)
 
 
+def save_stereo_maps(
+        cam_left_name,
+        cam_right_name,
+        stereo_map_left,
+        stereo_map_right,
+        proj_matrix_left,
+        proj_matrix_right,
+        Q, roi_l, roi_r):
+    
+    if cam_left_name == "CAM_1" and cam_right_name == "CAM_2":
+        stereo_name = "STEREO_A"
+    else:
+        stereo_name = "STEREO_B"
+        
+    root = find_project_root()
+    # Create a FileStorage object to write data into an XML file
+    cv_file = cv2.FileStorage(
+        f'{root}/output/{stereo_name}_rectification_params.xml', cv2.FILE_STORAGE_WRITE)
+
+    # Write the stereo map components (for both left and right)
+    cv_file.write(f"{cam_left_name}_map_x", stereo_map_left[0])
+    cv_file.write(f"{cam_left_name}_map_y", stereo_map_left[1])
+    
+    cv_file.write(f"{cam_right_name}_map_x", stereo_map_right[0])
+    cv_file.write(f"{cam_right_name}_map_y", stereo_map_right[1])
+
+    # Write projection matrices
+    cv_file.write(f"{cam_left_name}_projection_matrix", proj_matrix_left)
+    cv_file.write(f"{cam_right_name}_projection_matrix", proj_matrix_right)
+
+    # Write disparity-to-depth matrix
+    cv_file.write(f"disparity_to_depth_matrix", Q)
+
+    # Write region of interest (ROI) for both cameras
+    cv_file.write(f"{cam_left_name}_roi", roi_l)
+    cv_file.write(f"{cam_right_name}_roi", roi_r)
+
+    # Save the file
+    cv_file.release()
+    print("Map parameters saved successfully!")
+
+
 def check_frame_size(img, expected_size=None):
     current_size = img.shape[:2]
     if expected_size is None:
@@ -62,6 +98,7 @@ def check_frame_size(img, expected_size=None):
         print(f"Error: Image size {current_size} does not match expected {expected_size}")
     return expected_size
 
+
 def detect_chessboard(frame, pattern_size, winSize, criteria):
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     # use adaptive threshold and normalization flags for better detection
@@ -69,8 +106,9 @@ def detect_chessboard(frame, pattern_size, winSize, criteria):
     ret, corners = cv2.findChessboardCorners(gray, pattern_size, flags)
     if ret:
         corners = cv2.cornerSubPix(gray, corners, winSize, (-1, -1), criteria)
-        
+
     return ret, corners
+
 
 def compute_reprojection_error_pair(objp, corners, K, D):
     ret, rvec, tvec = cv2.solvePnP(objp, corners, K, D)
@@ -78,13 +116,116 @@ def compute_reprojection_error_pair(objp, corners, K, D):
     error = cv2.norm(corners, proj, cv2.NORM_L2) / len(objp)
     return error
 
+
+def stereo_calibration(
+    objpoints,
+    imgpoints_left,
+    imgpoints_right,
+    K_left,
+    D_left,
+    K_right,
+    D_right,
+    image_size,
+):
+    """
+    Use the original K and D parameters to calibrate the stereo pair (intrinsics)
+    """
+    # flags control how the calibration works
+    flags = 0
+    # CALIB_FIX_INTRINSIC -> not change the intrinsic parameters we already calculated
+    # meaning we only want to calibrate how the cameras relate to each other not recalibrate them individually
+    flags |= cv2.CALIB_FIX_INTRINSIC
+
+    # iteration stopping criteria
+    # 30 iterations or until the change in the parameters is less than 0.001
+    criteria_stereo = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
+
+    # stereoCalibrate
+    # R = rotation matrix
+    # T = translation vector
+    # E = essential matrix
+    # F = fundamental matrix
+    ret, _, _, _, _, R, T, E, F = cv2.stereoCalibrate(
+        objpoints, imgpoints_left, imgpoints_right,
+        K_left, D_left, K_right, D_right,
+        image_size,
+        criteria=criteria_stereo,
+        flags=flags
+    )
+    return ret, R, T, E, F
+
+
+def stereo_rectification(
+    K_left_undistort,
+    D_left,
+    K_right_undistort,
+    D_right,
+    image_size,
+    R,
+    T,
+):
+    """
+    Use the undistorted K and D parameters to rectify the stereo pair (intrinsics)
+    Rectification alignment step so both cameras share the same coordinate system
+    Warps images so they behave as if cameras were perfectly parallel (same y-coordinates for corresponding points)
+    Corresponding points are the same row in the rectified images
+    """
+    rectify_scale = 1
+    # rect_l = rectification transform (rotation matrix)
+    # rect_r = rectification transform (rotation matrix)
+    # proj_matrix_l = projection matrix in new (rectified) coord system for the left camera
+    # proj_matrix_r = projection matrix in new (rectified) coord system for the right camera
+    # Q = disparity-to-depth mapping matrix
+    # roi_l = region of interest in the rectified image
+    # roi_r = region of interest in the rectified image
+    rect_l, rect_r, proj_matrix_l, proj_matrix_r, Q, roi_l, roi_r = cv2.stereoRectify(
+        K_left_undistort, D_left, K_right_undistort, D_right,
+        image_size,
+        R,
+        T,
+        rectify_scale,
+        newImageSize=(0, 0)
+    )
+
+    # correct distortion and apply rectification
+    # output maps which are pre-made instructions to quickly adjust the images before depth estimation
+    stereo_map_left = cv2.initUndistortRectifyMap(
+        K_left_undistort, D_left,
+        rect_l,
+        proj_matrix_l,
+        image_size,
+        m1type=cv2.CV_32FC1
+    )
+
+    stereo_map_right = cv2.initUndistortRectifyMap(
+        K_right_undistort, D_right,
+        rect_r,
+        proj_matrix_r,
+        image_size,
+        m1type=cv2.CV_32FC1
+    )
+
+    return stereo_map_left, stereo_map_right, proj_matrix_l, proj_matrix_r, Q, roi_l, roi_r
+
+
 def calibrate_stereo_from_folder(
+        cam_left_name,
+        cam_right_name,
         folder,
         chessboard_size,
         square_size_mm,
         intrinsic_left,
         intrinsic_right,
-        error_threshold=0.05):
+        error_threshold=0.1):
+    
+    # extrinsics parameters for stereo calibration
+    K_left = np.array(intrinsic_left["K"])
+    K_left_undistort = np.array(intrinsic_left["K_undistort"])
+    D_left = np.array(intrinsic_left["D"])
+
+    K_right = np.array(intrinsic_right["K"])
+    K_right_undistort = np.array(intrinsic_right["K_undistort"])
+    D_right = np.array(intrinsic_right["D"])
 
     subfolders = sorted(glob.glob(os.path.join(folder, "*")))
     objpoints = []
@@ -100,19 +241,12 @@ def calibrate_stereo_from_folder(
     # This yields more accurate chessboard points and lower calibration errors
     winSize = (5, 5)
     zeroZone = (-1, -1)
-    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 50, 0.0001)
-
-    # Convert intrinsics to numpy arrays
-    K_left = np.array(intrinsic_left["K"])
-    D_left = np.array(intrinsic_left["D"])
-    K_right = np.array(intrinsic_right["K"])
-    D_right = np.array(intrinsic_right["D"])
-
+    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 50, 0.001)
     expected_size = None
     i = 0
     for subfolder in tqdm(subfolders, desc="Processing folders"):
-        left_img_path = os.path.join(subfolder, "left.png")
-        right_img_path = os.path.join(subfolder, "right.png")
+        left_img_path = os.path.join(subfolder, "cam_1.png")
+        right_img_path = os.path.join(subfolder, "cam_2.png")
         if not os.path.exists(left_img_path) or not os.path.exists(right_img_path):
             continue
 
@@ -126,8 +260,11 @@ def calibrate_stereo_from_folder(
         gray_left = cv2.cvtColor(left_img, cv2.COLOR_BGR2GRAY)
         gray_right = cv2.cvtColor(right_img, cv2.COLOR_BGR2GRAY)
 
-        ret_left, corners_left = detect_chessboard(left_img, chessboard_size, winSize, criteria)
-        ret_right, corners_right = detect_chessboard(right_img, chessboard_size, winSize, criteria)
+        ret_left, corners_left = detect_chessboard(
+            left_img, chessboard_size, winSize, criteria)
+        ret_right, corners_right = detect_chessboard(
+            right_img, chessboard_size, winSize, criteria)
+
         if ret_left and ret_right:
             # compute error for each image individually using solvePnP
             error_l = compute_reprojection_error_pair(objp, corners_left, K_left, D_left)
@@ -140,7 +277,7 @@ def calibrate_stereo_from_folder(
                 imgpoints_left.append(corners_left)
                 imgpoints_right.append(corners_right)
                 filtered_image_paths.append((left_img_path, right_img_path))
-            
+
             # if i < 5:
             #     cv2.drawChessboardCorners(left_img, chessboard_size, corners_left, ret_left)
             #     cv2.drawChessboardCorners(right_img, chessboard_size, corners_right, ret_right)
@@ -152,17 +289,37 @@ def calibrate_stereo_from_folder(
     if len(objpoints) < 3:
         raise Exception("Not enough valid pairs for stereo calibration")
 
+
     image_size = gray_left.shape[::-1]
-    # stereo calibration with filtered pairs
-    ret, _, _, _, _, R, T, E, F = cv2.stereoCalibrate(
+    # stereo calibration to get the rotation matrix and translation vector
+    ret, R, T, E, F = stereo_calibration(
         objpoints, imgpoints_left, imgpoints_right,
         K_left, D_left, K_right, D_right,
         image_size,
-        criteria=(cv2.TERM_CRITERIA_MAX_ITER + cv2.TERM_CRITERIA_EPS, 100, 1e-5),
-        flags=cv2.CALIB_FIX_INTRINSIC
     )
+    
     print(f"VALID PAIRS -> {len(objpoints)} REPROJECTION ERROR -> {round(ret, 3)}")
 
+    # stereo rectification to align the cameras
+    stereo_map_left, stereo_map_right, proj_matrix_left, proj_matrix_right, Q, roi_l, roi_r = stereo_rectification(
+        K_left_undistort, D_left, K_right_undistort, D_right,
+        image_size,
+        R,
+        T,
+    )
+    
+    try: 
+        save_stereo_maps(
+            cam_left_name,
+            cam_right_name,
+            stereo_map_left,
+            stereo_map_right,
+            proj_matrix_left,
+            proj_matrix_right,
+            Q, roi_l, roi_r)
+    except:
+        raise "error saving stereo maps"
+    
     try:
         save_filtered_pairs(filtered_image_paths, folder)
     except:
@@ -180,7 +337,7 @@ def calibrate_stereo_from_folder(
 
 if __name__ == "__main__":
     root = find_project_root()
-
+    base_path = f"{root}/images/STEREOS"
     # Load intrinsic parameters computed previously
     intrinsic_path = os.path.join(root, "output", "intrinsic_params.json")
     with open(intrinsic_path, "r") as f:
@@ -189,28 +346,35 @@ if __name__ == "__main__":
     chessboard_size = (9, 6)
     square_size_mm = 60
 
-    # Stereo-left: LEFT_CAM_A and LEFT_CAM_B
-    stereo_left_folder = os.path.join(root, "images", "cameras", "stereo-left", "V2_STEREO")
-    stereo_left_params = calibrate_stereo_from_folder(
-        stereo_left_folder,
-        chessboard_size,
-        square_size_mm,
-        intrinsics["LEFT_CAM_A"],
-        intrinsics["LEFT_CAM_B"]
+    # STEREO A
+    stereo_a_folder = os.path.join(base_path, "STEREO_A", "stereo_frames")
+    stereo_a_params = calibrate_stereo_from_folder(
+        cam_left_name="CAM_1",
+        cam_right_name="CAM_2",
+        folder=stereo_a_folder,
+        chessboard_size=chessboard_size,
+        square_size_mm=square_size_mm,
+        intrinsic_left=intrinsics["CAM_1"],
+        intrinsic_right=intrinsics["CAM_2"]
     )
 
-    # Stereo-right: RIGHT_CAM_A and RIGHT_CAM_B
-    stereo_right_folder = os.path.join(root, "images", "cameras", "stereo-right", "V2_STEREO")
-    stereo_right_params = calibrate_stereo_from_folder(
-        stereo_right_folder, chessboard_size, square_size_mm,
-        intrinsics["RIGHT_CAM_A"], intrinsics["RIGHT_CAM_B"]
+    # STEREO B
+    stereo_b_folder = os.path.join(base_path, "STEREO_B", "stereo_frames")
+    stereo_b_params = calibrate_stereo_from_folder(
+        cam_left_name="CAM_3",
+        cam_right_name="CAM_4",
+        folder=stereo_b_folder,
+        chessboard_size=chessboard_size,
+        square_size_mm=square_size_mm,
+        intrinsic_left=intrinsics["CAM_3"],
+        intrinsic_right=intrinsics["CAM_4"]
     )
 
     stereo_params = {
-        "stereo_left": stereo_left_params,
-        "stereo_right": stereo_right_params
+        "STEREO_A": stereo_a_params,
+        "STEREO_B": stereo_b_params
     }
 
-    output_path = os.path.join(root, "output", "stereo_params_3.json")
+    output_path = os.path.join(root, "output", "1_stereo_params.json")
     save_json(stereo_params, output_path)
     print("Stereo calibration parameters saved to", output_path)
