@@ -153,8 +153,14 @@ def calibrate_camera_from_folder(folder, chessboard_size, square_size_mm):
 
     # NOTE: save filtered images used to achieve the reprojection error - debugging purposes
     filtered_folder = os.path.join(os.path.dirname(folder), "filtered_" + os.path.basename(folder))
+    
+    # if folder exist, remove the content inside
+    if os.path.exists(filtered_folder):
+        shutil.rmtree(filtered_folder)
+        
     if not os.path.exists(filtered_folder):
         os.makedirs(filtered_folder)
+        
     for idx in filtered_indices:
         src = initial_imgs[idx]
         dest = os.path.join(filtered_folder, os.path.basename(src))
@@ -181,10 +187,10 @@ def save_intrinsics_to_json(intrinsics_dict, output_path):
 
 def process_intrinsic(base_folder, output_path, chessboard_size, square_size_mm):
     cameras = {
-        "LEFT_CAM_A": os.path.join(base_folder, "stereo-left", "V2_CAM_A"),
-        "LEFT_CAM_B": os.path.join(base_folder, "stereo-left", "V2_CAM_B"),
-        "RIGHT_CAM_A": os.path.join(base_folder, "stereo-right", "V2_CAM_A"),
-        "RIGHT_CAM_B": os.path.join(base_folder, "stereo-right", "V2_CAM_B")
+        "CAM_1": os.path.join(base_folder, "STEREO_A/CAMERA_1", "intrinsic_frames"),
+        "CAM_2": os.path.join(base_folder, "STEREO_A/CAMERA_2", "intrinsic_frames"),
+        "CAM_3": os.path.join(base_folder, "STEREO_B/CAMERA_3", "intrinsic_frames"),
+        "CAM_4": os.path.join(base_folder, "STEREO_B/CAMERA_4", "intrinsic_frames")
     }
     intrinsics = {}
     for cam_name, folder in cameras.items():
@@ -223,7 +229,7 @@ def process_intrinsic(base_folder, output_path, chessboard_size, square_size_mm)
 
 if __name__ == "__main__":
     root = find_project_root()
-    base_path = f"{root}/images/cameras"
+    base_path = f"{root}/images/STEREOS"
     output_path = f"{root}/output/intrinsic_params.json"
     chessboard_size = (9, 6)
     square_size_mm = 60

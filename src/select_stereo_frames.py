@@ -3,6 +3,7 @@ import av
 import numpy as np
 import os
 from pathlib import Path
+import shutil
 
 
 def find_project_root(marker=".gitignore"):
@@ -24,8 +25,11 @@ def detect_chessboard(frame, pattern_size):
     flags = cv2.CALIB_CB_ADAPTIVE_THRESH | cv2.CALIB_CB_NORMALIZE_IMAGE
     ret, corners = cv2.findChessboardCorners(gray, pattern_size, flags)
     if ret:
-        criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
-        corners = cv2.cornerSubPix(gray, corners, (5, 5), (-1, -1), criteria)
+        # more iterations = improve accuracy 
+        # lower epsilon = higher precision
+        criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 50, 0.001)
+        # more window size = less accurate but detect more frames
+        corners = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), criteria)
     return ret, corners
 
 
@@ -43,6 +47,9 @@ def process_stereo_videos(
         pattern_size,
         num_frames,
         skip_seconds=1):
+    # clean this folder if it exists
+    if os.path.exists(output_dir):
+        shutil.rmtree(output_dir)
     # create the output folder if it doesn't exist
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
@@ -66,8 +73,6 @@ def process_stereo_videos(
 
     # iterate through time, reading a frame from each video at the same timestamp
     for sec in np.arange(0, duration_seconds):
-        if len(detected_pairs) == 5:
-            break
         cam_1_frame_no = int(sec * cam_1_fps)
         cam_2_frame_no = int(sec * cam_2_fps)
         
@@ -78,6 +83,7 @@ def process_stereo_videos(
         ret_cam_2, cam_2_frame = cam_2_cap.read()
 
         if not ret_cam_1 or not ret_cam_2:
+            print("problem reading frames")
             break
 
         # detect chessboard in both frames
@@ -147,5 +153,3 @@ if __name__ == "__main__":
             skip_seconds=0.5
         )
         print(f"--------------------------- {cam_name} DONE ---------------------------")
-
-# remover 53 al final 4_cam
