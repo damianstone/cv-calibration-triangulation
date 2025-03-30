@@ -5,3 +5,5 @@ venv-tp/
 videos**
 images**
 images/
+data/
+output/*.xml
