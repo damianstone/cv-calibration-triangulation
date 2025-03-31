@@ -6,4 +6,4 @@ videos**
 images**
 images/
 data/
-output/*.xml
+output/**/*.xml

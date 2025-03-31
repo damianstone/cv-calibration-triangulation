@@ -339,7 +339,7 @@ if __name__ == "__main__":
     root = find_project_root()
     base_path = f"{root}/images/STEREOS"
     # Load intrinsic parameters computed previously
-    intrinsic_path = os.path.join(root, "output", "intrinsic_params.json")
+    intrinsic_path = os.path.join(root, "output", "2_intrinsic_params.json")
     with open(intrinsic_path, "r") as f:
         intrinsics = json.load(f)
 
@@ -347,16 +347,16 @@ if __name__ == "__main__":
     square_size_mm = 60
 
     # STEREO A
-    stereo_a_folder = os.path.join(base_path, "STEREO_A", "stereo_frames")
-    stereo_a_params = calibrate_stereo_from_folder(
-        cam_left_name="CAM_1",
-        cam_right_name="CAM_2",
-        folder=stereo_a_folder,
-        chessboard_size=chessboard_size,
-        square_size_mm=square_size_mm,
-        intrinsic_left=intrinsics["CAM_1"],
-        intrinsic_right=intrinsics["CAM_2"]
-    )
+    # stereo_a_folder = os.path.join(base_path, "STEREO_A", "stereo_frames")
+    # stereo_a_params = calibrate_stereo_from_folder(
+    #     cam_left_name="CAM_1",
+    #     cam_right_name="CAM_2",
+    #     folder=stereo_a_folder,
+    #     chessboard_size=chessboard_size,
+    #     square_size_mm=square_size_mm,
+    #     intrinsic_left=intrinsics["CAM_1"],
+    #     intrinsic_right=intrinsics["CAM_2"]
+    # )
 
     # STEREO B
     stereo_b_folder = os.path.join(base_path, "STEREO_B", "stereo_frames")
@@ -371,10 +371,10 @@ if __name__ == "__main__":
     )
 
     stereo_params = {
-        "STEREO_A": stereo_a_params,
+        # "STEREO_A": stereo_a_params,
         "STEREO_B": stereo_b_params
     }
 
-    output_path = os.path.join(root, "output", "1_stereo_params.json")
+    output_path = os.path.join(root, "output", "2_stereo_b_params.json")
     save_json(stereo_params, output_path)
-    print("Stereo calibration parameters saved to", output_path)
+    print("Stereo calibration parameters saved")

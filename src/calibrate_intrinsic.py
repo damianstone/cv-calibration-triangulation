@@ -135,7 +135,7 @@ def calibrate_camera_from_folder(folder, chessboard_size, square_size_mm):
         T,
         K,
         D,
-        threshold=0.3,
+        threshold=0.1,
     )
     count_after = len(filtered_obj)
     if count_after >= 3:
@@ -187,8 +187,8 @@ def save_intrinsics_to_json(intrinsics_dict, output_path):
 
 def process_intrinsic(base_folder, output_path, chessboard_size, square_size_mm):
     cameras = {
-        "CAM_1": os.path.join(base_folder, "STEREO_A/CAMERA_1", "intrinsic_frames"),
-        "CAM_2": os.path.join(base_folder, "STEREO_A/CAMERA_2", "intrinsic_frames"),
+        # "CAM_1": os.path.join(base_folder, "STEREO_A/CAMERA_1", "intrinsic_frames"),
+        # "CAM_2": os.path.join(base_folder, "STEREO_A/CAMERA_2", "intrinsic_frames"),
         "CAM_3": os.path.join(base_folder, "STEREO_B/CAMERA_3", "intrinsic_frames"),
         "CAM_4": os.path.join(base_folder, "STEREO_B/CAMERA_4", "intrinsic_frames")
     }
@@ -230,7 +230,7 @@ def process_intrinsic(base_folder, output_path, chessboard_size, square_size_mm)
 if __name__ == "__main__":
     root = find_project_root()
     base_path = f"{root}/images/STEREOS"
-    output_path = f"{root}/output/intrinsic_params.json"
+    output_path = f"{root}/output/2_intrinsic_params.json"
     chessboard_size = (9, 6)
     square_size_mm = 60
     process_intrinsic(base_path, output_path, chessboard_size, square_size_mm)
