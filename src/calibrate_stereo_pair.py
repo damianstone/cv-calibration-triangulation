@@ -65,7 +65,7 @@ def save_stereo_maps(
     root = find_project_root()
     # Create a FileStorage object to write data into an XML file
     cv_file = cv2.FileStorage(
-        f'{root}/output/{stereo_name}_rectification_params.xml', cv2.FILE_STORAGE_WRITE)
+        f'{root}/output/{stereo_name}_rectification_params_2.xml', cv2.FILE_STORAGE_WRITE)
 
     # Write the stereo map components (for both left and right)
     cv_file.write(f"{cam_left_name}_map_x", stereo_map_left[0])
@@ -170,7 +170,6 @@ def stereo_rectification(
     Warps images so they behave as if cameras were perfectly parallel (same y-coordinates for corresponding points)
     Corresponding points are the same row in the rectified images
     """
-    rectify_scale = 1
     # rect_l = rectification transform (rotation matrix)
     # rect_r = rectification transform (rotation matrix)
     # proj_matrix_l = projection matrix in new (rectified) coord system for the left camera
@@ -183,7 +182,7 @@ def stereo_rectification(
         image_size,
         R,
         T,
-        rectify_scale,
+        alpha=-1,
         newImageSize=(0, 0)
     )
 
@@ -375,6 +374,6 @@ if __name__ == "__main__":
         "STEREO_B": stereo_b_params
     }
 
-    output_path = os.path.join(root, "output", "2_stereo_b_params.json")
+    output_path = os.path.join(root, "output", "3_stereo_b_params.json")
     save_json(stereo_params, output_path)
     print("Stereo calibration parameters saved")
