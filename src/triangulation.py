@@ -139,12 +139,8 @@ def triangulate(
     detections_csv, after_count, prev_count = preprocess_detections(
         detections_csv, confidence_threshold)
 
-    count = 0
     valid_detections = 0
     for index, row in detections_csv.iterrows():
-        if index > 10:
-            break
-
         print(f"Processing frame {row['frame_no']}")
         # 2D points from YOLO, measure = pixels
         cam1_2d = (row['A1_x'] * scale_factor, row['A1_y'] * scale_factor)
@@ -212,9 +208,8 @@ def triangulate(
     return {
         "confidence_threshold": confidence_threshold,
         "pixel_threshold": pixel_threshold,
-        "total_rows": prev_count,
-        "filtered_rows": after_count,
-        "filtered_set": prev_count - after_count,
+        "total_raw_set": prev_count,
+        "total_filtered_set": len(detections_csv),
         "valid_detections": valid_detections,
         "percentage_valid_detections": round((valid_detections / len(detections_csv)) * 100, 2),
         "A1_average_cm_error": round(float(a1_average_cm_error), 2),
