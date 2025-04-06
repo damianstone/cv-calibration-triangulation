@@ -1,1 +1,12 @@
-{"confidence_threshold": 0.3, "pixel_threshold": 15, "total_raw_set": 509, "total_filtered_set": 101, "valid_detections": 67, "percentage_valid_detections": 66.34, "A1_average_cm_error": 2.12, "A2_average_cm_error": 2.41, "A1_threshold_cm": 8.09, "A2_threshold_cm": 8.34}
+{
+  "confidence_threshold": 0.3,
+  "pixel_threshold": 15,
+  "total_raw_set": 509,
+  "total_filtered_set": 101,
+  "valid_detections": 67,
+  "percentage_valid_detections": 66.34,
+  "A1_average_cm_error": 2.12,
+  "A2_average_cm_error": 2.41,
+  "A1_threshold_cm": 8.09,
+  "A2_threshold_cm": 8.34
+}

@@ -2,6 +2,11 @@
 
 All the folders inside `src/` (e.g. `src/get-intrinsic-params/` ) as they are just notebooks for testing with public data and for learning about calibration
 
+Other files to ignore
+- coordinates.py
+- trajectory.py
+- blender_shot.py
+
 ## Start
 
 ```bash
@@ -23,6 +28,10 @@ pip install -r requirements.txt
 `select_stereo_frames.py` -> get the frames for stereo calibration, same as the script above but for the common view of each pair of cameras
 
 `calibrate_intrinsic.py` -> go through all the frames for each camera to compute the intrinsic parameters and store them in `output/intrinsic.json`
+
+`calibrate_stereo_pair.py` -> go through synchronised frames calculating the extrinsic parameters per stereo and rectification
+
+`triangulation.py` -> go through YOLO output calculating the 3D ball position and projecting the calculated ball in the corresponding frame. saving the images in `reprojected_frames/`
 
 **None of the scripts receive any arguments**
 
