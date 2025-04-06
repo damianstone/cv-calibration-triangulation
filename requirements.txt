@@ -7,3 +7,4 @@ tqdm
 pyav
 scipy
 pandas
+scikit-learn

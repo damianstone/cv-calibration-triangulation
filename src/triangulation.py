@@ -65,6 +65,9 @@ def get_projection_matrices(
         K_cam2_undistort,
         stereo_rotation_matrix,
         stereo_translation_vector):
+    """
+    The origin for points is the center of the camera 1
+    """
     # Camera 1's projection matrix
     P1 = np.dot(K_cam1_undistort, np.hstack((np.eye(3), np.zeros((3, 1)))))
     R2 = np.array(stereo_rotation_matrix)  # Rotation matrix from stereo extrinsics
@@ -84,13 +87,31 @@ def get_average_error_cm(detections_csv):
     return average_cm_error_a1, average_cm_error_a2
 
 
+def get_average_cm_threshold(detections_csv, pixel_threshold, Fx_cam1, Fx_cam2):
+    if len(detections_csv) == 0:
+        return 0, 0
+
+    # Get all valid 3D points and extract Z coordinates
+    depths = []
+    for points_3d_str in detections_csv['position_3d_pixels']:
+        points_3d = np.array(eval(points_3d_str))
+        depths.append(points_3d[2])
+
+    avg_depth = np.mean(depths)
+
+    threshold_cm_cam1 = (pixel_threshold * avg_depth) / (Fx_cam1 * 10)
+    threshold_cm_cam2 = (pixel_threshold * avg_depth) / (Fx_cam2 * 10)
+
+    return threshold_cm_cam1, threshold_cm_cam2
+
+
 def preprocess_detections(detections_csv, threshold=0.3):
     # count how many detections are in the csv file (how many rows)
     detections = detections_csv.copy()
     previous_detection_count = len(detections)
-    # TODO: order detections by frame number
+    # order detections by frame number
     detections = detections.sort_values(by='frame_no')
-    # TODO: if A1_confidence or A2_confidence is less than 0.4, remove the detection
+    # if A1_confidence or A2_confidence is less than 0.4, remove the detection
     detections = detections[detections['A1_confidence'] > threshold]
     detections = detections[detections['A2_confidence'] > threshold]
     filtered_detection_count = len(detections)
@@ -158,41 +179,42 @@ def triangulate(
 
         # convert to 3D points
         points_3d = points_3d_homogeneous[:3] / points_3d_homogeneous[3]
-        points_3d_meters = points_3d / 1000.0
 
-        error1, error2, cam1_reprojected_point, cam2_reprojected_point = compute_reprojection_error(
+        # get back the 2D points from the 3D points to validate the triangulation
+        # the reprojected points are 2D points after triangulation
+        e1_px, e2_px, cam1_reprojected_point, cam2_reprojected_point = compute_reprojection_error(
             points_3d, P1, P2, undistorted_point_camera_1, undistorted_point_camera_2)
 
-        if error1 > pixel_threshold or error2 > pixel_threshold:
+        # get the difference of original 2D with respect to the reprojected 2D in centimeters
+        e1_cm, e2_cm = get_error_cm(e1_px, e2_px, Fx_cam1, Fx_cam2, points_3d)
+
+        # using pixel threshold to check what is the error in cm
+        if e1_px > pixel_threshold or e2_px > pixel_threshold:
             anomaly_detected = True
             print(
                 f"----------------------------------Anomaly detected {row['frame_no']}----------------------------------")
-            print(f"ORIGINAL A1: {tuple(map(lambda x: round(x, 2), cam1_2d))}")
+            print(f"ORIGINAL A1: {tuple(map(lambda x: round(float(x), 2), cam1_2d))}")
             print(
-                f"REPROJECTION A1: {tuple(map(lambda x: round(x, 2), cam1_reprojected_point))}")
-            print(f"ORIGINAL A2: {tuple(map(lambda x: round(x, 2), cam2_2d))}")
+                f"REPROJECTION A1: {tuple(map(lambda x: round(float(x), 2), cam1_reprojected_point))}")
+            print(f"ORIGINAL A2: {tuple(map(lambda x: round(float(x), 2), cam2_2d))}")
             print(
-                f"REPROJECTION A2: {tuple(map(lambda x: round(x, 2), cam2_reprojected_point))}")
-            print(f"ERROR A1: {round(error1, 2)}")
-            print(f"ERROR A2: {round(error2, 2)}")
+                f"REPROJECTION A2: {tuple(map(lambda x: round(float(x), 2), cam2_reprojected_point))}")
+            print(f"ERROR A1 (cm): {round(float(e1_cm), 2)}")
+            print(f"ERROR A2 (cm): {round(float(e2_cm), 2)}")
         else:
             anomaly_detected = False
             valid_detections += 1
 
-        e1_cm, e2_cm = get_error_cm(error1, error2, Fx_cam1, Fx_cam2, points_3d)
-        # TODO: calculate what is the cm value for pixel threshold
-
+        # plot the 2D points extracted from the 3D points to visualise how close they are with respect to the
+        # original ball in the frame image
         plot_projections(cam1_reprojected_point, cam2_reprojected_point,
                          row, matched_stereo_frames_folder, scale_factor)
 
+        # update CSV file with the new data
         points_3d_str = str(points_3d.ravel().tolist())
-        points_3d_meters_str = str(points_3d_meters.ravel().tolist())
         cam1_reprojected_str = str(cam1_reprojected_point.tolist())
         cam2_reprojected_str = str(cam2_reprojected_point.tolist())
-
-        # NOTE: update csv
-        detections_csv.at[index, 'position_3d'] = points_3d_str
-        detections_csv.at[index, 'position_3d_meters'] = points_3d_meters_str
+        detections_csv.at[index, 'position_3d_pixels'] = points_3d_str
         detections_csv.at[index, 'A1_reprojected_point'] = cam1_reprojected_str
         detections_csv.at[index, 'A1_error_cm'] = e1_cm
         detections_csv.at[index, 'A2_reprojected_point'] = cam2_reprojected_str
@@ -203,7 +225,15 @@ def triangulate(
     root = find_project_root()
     detections_csv.to_csv(f"{root}/data/stereo_detections_triangulated.csv", index=False)
     print(f"Saved to {root}/data/stereo_detections_triangulated.csv")
+
+    # average error in centimeters of the reprojected points with respect to the original points
     a1_average_cm_error, a2_average_cm_error = get_average_error_cm(detections_csv)
+
+    # the threshold we use is in pixels, we need to convert it to centimeters
+    # just to know better what is the threshold we use
+    # (convert the whole pipeline in centimeters it's more annoying to debug)
+    A1_threshold_cm, A2_threshold_cm = get_average_cm_threshold(
+        detections_csv, pixel_threshold, Fx_cam1, Fx_cam2)
 
     return {
         "confidence_threshold": confidence_threshold,
@@ -213,7 +243,9 @@ def triangulate(
         "valid_detections": valid_detections,
         "percentage_valid_detections": round((valid_detections / len(detections_csv)) * 100, 2),
         "A1_average_cm_error": round(float(a1_average_cm_error), 2),
-        "A2_average_cm_error": round(float(a2_average_cm_error), 2)
+        "A2_average_cm_error": round(float(a2_average_cm_error), 2),
+        "A1_threshold_cm": round(float(A1_threshold_cm), 2),
+        "A2_threshold_cm": round(float(A2_threshold_cm), 2)
     }
 
 
@@ -230,6 +262,7 @@ if __name__ == "__main__":
         shutil.rmtree(reprojected_frames)
         os.makedirs(reprojected_frames)
 
+    # NOTE: get intrinsics and extrinsics parameters
     # get intrinsics parameters from json file
     intrinsics_path = f"{root}/output/intrinsic_params.json"
     with open(intrinsics_path, 'r') as f:
@@ -257,9 +290,13 @@ if __name__ == "__main__":
         stereo_rotation_matrix,
         stereo_translation_vector)
 
-    scale_factor = 2  # from 1080 to 4K
+    # yolo points were taken in 1080 frames, and triangulation is done in 4K
+    # so we need to scale up the points
+    scale_factor = 2
+    # threshold to filter YOLO bad detections
     confidence_threshold = 0.3
-    pixel_threshold = 15
+    # threshold to filter bad triangulations
+    pixel_threshold = 15  # 15px = 8cm approx
     results_data = triangulate(
         scale_factor,
         pixel_threshold,
