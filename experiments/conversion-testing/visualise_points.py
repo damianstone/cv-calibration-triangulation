@@ -12,8 +12,8 @@ df = pd.read_csv("data/stereo_detections_triangulated.csv").head(16) #.head(27).
 # frame 973 is bounce
 # 1011 is return
 
-offset_to_origin = np.array([-5.7, -0.2, 1.7])
-offset_to_origin = np.array([0, 0, 0])
+offset_to_origin = np.array([-5.7, 0.2, 1.7]) # Apply after converting pixels to metres
+# offset_to_origin = np.array([0, 0, 0])
 
 # Parse the 3D position strings and convert from mm to meters
 trajectory = df['position_3d_pixels'].apply(lambda s: np.array(eval(s)) / 1000.0)
@@ -21,7 +21,7 @@ trajectory = np.vstack(trajectory.values)
 
 x = trajectory[:, 2] + offset_to_origin[0]  # Horizontal position (court width)
 y = trajectory[:, 0] + offset_to_origin[1]  # Court length
-z = -trajectory[:, 1] + offset_to_origin[2]  # Height above court
+z = -(trajectory[:, 1]) + offset_to_origin[2]  # Height above court
 
 # ---------------------
 # Court Geometry
@@ -81,7 +81,7 @@ scatter_container = [None]
 scatter_container[0] = ax.scatter(x, y, z, c=z, cmap="autumn_r", edgecolor="k", s=50, label="Trajectory Points")
 (line,) = ax.plot(x, y, z, color="red", label="Path")
 
-ax.set_zlim(0, 5)
+ax.set_zlim(0, 8)
 ax.set_xlim(-offset_x, offset_x)
 ax.set_ylim(-offset_y, offset_y)
 ax.set_aspect('equal')
