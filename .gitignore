@@ -5,6 +5,5 @@ venv-tp/
 videos**
 images**
 images/
-data/stereo_detections.csv
 output/**/*.xml
 matched_stereo_frames/

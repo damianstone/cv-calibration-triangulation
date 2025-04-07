@@ -161,10 +161,11 @@ def compute_reprojection_error(points_3d, P1, P2, undistorted_point_camera_1, un
     reprojected_point_1 /= reprojected_point_1[2]
     reprojected_point_2 /= reprojected_point_2[2]
 
-    # NOTE: ravel() method is used to convert the 2D array into a 1D array
+    # ravel() method is used to convert the 2D array into a 1D array
     cam1_reprojected_point = reprojected_point_1[:2].ravel()
     cam2_reprojected_point = reprojected_point_2[:2].ravel()
 
+    # euclidean distance between the original and the reprojected point
     error1 = np.linalg.norm(cam1_reprojected_point - undistorted_point_camera_1.ravel())
     error2 = np.linalg.norm(cam2_reprojected_point - undistorted_point_camera_2.ravel())
     return error1, error2, cam1_reprojected_point, cam2_reprojected_point
@@ -237,6 +238,7 @@ def triangulate(
             print(f"ERROR A1 (cm): {round(float(e1_cm), 2)}")
             print(f"ERROR A2 (cm): {round(float(e2_cm), 2)}")
 
+            # save anomaly reprojection plots in a separate folder 
             plot_projection_anomaly(cam1_reprojected_point, cam2_reprojected_point,
                                     row, matched_stereo_frames_folder, scale_factor)
         else:
@@ -332,8 +334,10 @@ if __name__ == "__main__":
     scale_factor = 2
     # threshold to filter YOLO bad detections
     confidence_threshold = 0.2
-    # threshold to filter bad triangulations
-    pixel_threshold = 60  # 50px = 30cm approx
+    # threshold to detect anomalies
+    # if the error between the original and the reprojected point is greater than this threshold,
+    # we consider the detection as an anomaly
+    pixel_threshold = 60  # 60px = 30cm approx
     results_data = triangulate(
         scale_factor,
         pixel_threshold,
