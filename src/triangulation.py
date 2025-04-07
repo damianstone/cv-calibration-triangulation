@@ -2,15 +2,12 @@ import cv2
 import numpy as np
 import pandas as pd
 import os
-import glob
 import json
 import shutil
-import sys
 from pathlib import Path
 from tqdm import tqdm
 from pprint import pprint
 from matplotlib import pyplot as plt
-import uuid
 
 
 def find_project_root(marker=".gitignore"):
@@ -22,7 +19,7 @@ def find_project_root(marker=".gitignore"):
         f"Project root marker '{marker}' not found starting from {current}")
 
 
-def plot_projections(
+def plot_projections_valid(
         cam1_reprojected_point,
         cam2_reprojected_point,
         row_data,
@@ -54,7 +51,45 @@ def plot_projections(
     cam1_with_point = plot_reprojected_point(cam1_frame, cam1_reprojected_point)
     cam2_with_point = plot_reprojected_point(cam2_frame, cam2_reprojected_point)
 
-    save_folder = f"{root}/reprojected_frames/frame_{frame_no}"
+    save_folder = f"{root}/reprojected_frames/valid/frame_{frame_no}"
+    os.makedirs(save_folder, exist_ok=True)
+    cv2.imwrite(f"{save_folder}/cam1.jpg", cam1_with_point)
+    cv2.imwrite(f"{save_folder}/cam2.jpg", cam2_with_point)
+
+
+def plot_projection_anomaly(
+        cam1_reprojected_point,
+        cam2_reprojected_point,
+        row_data,
+        matched_stereo_frames_folder,
+        scale_factor):
+    frame_no = row_data['frame_no']
+    frame_folder = f"{matched_stereo_frames_folder}/frame_{frame_no}"
+    cam1_frame = f"{frame_folder}/1_{frame_no}.jpg"
+    cam2_frame = f"{frame_folder}/2_{frame_no}.jpg"
+
+    cam1_frame = cv2.imread(cam1_frame)
+    cam2_frame = cv2.imread(cam2_frame)
+
+    def plot_reprojected_point(frame, point, color=(0, 255, 0), radius=15):
+        frame_copy = frame.copy()
+        # Convert point coordinates to integers and ensure they are within frame boundaries
+        x = int(round(point[0] / scale_factor))
+        y = int(round(point[1] / scale_factor))
+
+        # Check if coordinates are within frame boundaries
+        if frame_copy is not None and 0 <= x < frame_copy.shape[1] and 0 <= y < frame_copy.shape[0]:
+            cv2.circle(frame_copy, (x, y), radius, color, -1)
+        else:
+            print(f"Warning: Point ({x}, {y}) is outside frame boundaries or frame is None")
+
+        return frame_copy
+
+    # Plot on both frames
+    cam1_with_point = plot_reprojected_point(cam1_frame, cam1_reprojected_point)
+    cam2_with_point = plot_reprojected_point(cam2_frame, cam2_reprojected_point)
+
+    save_folder = f"{root}/reprojected_frames/anomalies/frame_{frame_no}"
     os.makedirs(save_folder, exist_ok=True)
     cv2.imwrite(f"{save_folder}/cam1.jpg", cam1_with_point)
     cv2.imwrite(f"{save_folder}/cam2.jpg", cam2_with_point)
@@ -201,14 +236,16 @@ def triangulate(
                 f"REPROJECTION A2: {tuple(map(lambda x: round(float(x), 2), cam2_reprojected_point))}")
             print(f"ERROR A1 (cm): {round(float(e1_cm), 2)}")
             print(f"ERROR A2 (cm): {round(float(e2_cm), 2)}")
+
+            plot_projection_anomaly(cam1_reprojected_point, cam2_reprojected_point,
+                                    row, matched_stereo_frames_folder, scale_factor)
         else:
             anomaly_detected = False
             valid_detections += 1
-
-        # plot the 2D points extracted from the 3D points to visualise how close they are with respect to the
-        # original ball in the frame image
-        plot_projections(cam1_reprojected_point, cam2_reprojected_point,
-                         row, matched_stereo_frames_folder, scale_factor)
+            # plot the 2D points extracted from the 3D points to visualise how close they are with respect to the
+            # original ball in the frame image
+            plot_projections_valid(cam1_reprojected_point, cam2_reprojected_point,
+                                   row, matched_stereo_frames_folder, scale_factor)
 
         # update CSV file with the new data
         points_3d_str = str(points_3d.ravel().tolist())
@@ -294,9 +331,9 @@ if __name__ == "__main__":
     # so we need to scale up the points
     scale_factor = 2
     # threshold to filter YOLO bad detections
-    confidence_threshold = 0.3
+    confidence_threshold = 0.2
     # threshold to filter bad triangulations
-    pixel_threshold = 15  # 15px = 8cm approx
+    pixel_threshold = 60  # 50px = 30cm approx
     results_data = triangulate(
         scale_factor,
         pixel_threshold,
@@ -314,6 +351,6 @@ if __name__ == "__main__":
     )
     pprint(results_data)
     # save results as json file
-    with open(f"{root}/output/triangulation_results_1.json", 'w') as f:
+    with open(f"{root}/output/triangulation_results_3.json", 'w') as f:
         json.dump(results_data, f)
     print("triangulation done")
