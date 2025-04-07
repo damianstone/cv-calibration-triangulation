@@ -51,7 +51,7 @@ def plot_projections_valid(
     cam1_with_point = plot_reprojected_point(cam1_frame, cam1_reprojected_point)
     cam2_with_point = plot_reprojected_point(cam2_frame, cam2_reprojected_point)
 
-    save_folder = f"{root}/reprojected_frames_A/valid/frame_{frame_no}"
+    save_folder = f"{root}/reprojected_frames/valid/frame_{frame_no}"
     os.makedirs(save_folder, exist_ok=True)
     cv2.imwrite(f"{save_folder}/cam1.jpg", cam1_with_point)
     cv2.imwrite(f"{save_folder}/cam2.jpg", cam2_with_point)
@@ -89,7 +89,7 @@ def plot_projection_anomaly(
     cam1_with_point = plot_reprojected_point(cam1_frame, cam1_reprojected_point)
     cam2_with_point = plot_reprojected_point(cam2_frame, cam2_reprojected_point)
 
-    save_folder = f"{root}/reprojected_frames_A/anomalies/frame_{frame_no}"
+    save_folder = f"{root}/reprojected_frames/anomalies/frame_{frame_no}"
     os.makedirs(save_folder, exist_ok=True)
     cv2.imwrite(f"{save_folder}/cam1.jpg", cam1_with_point)
     cv2.imwrite(f"{save_folder}/cam2.jpg", cam2_with_point)
@@ -237,22 +237,17 @@ def triangulate(
                 f"REPROJECTION A2: {tuple(map(lambda x: round(float(x), 2), cam2_reprojected_point))}")
             print(f"ERROR A1 (cm): {round(float(e1_cm), 2)}")
             print(f"ERROR A2 (cm): {round(float(e2_cm), 2)}")
-            try:
-                # save anomaly reprojection plots in a separate folder 
-                plot_projection_anomaly(cam1_reprojected_point, cam2_reprojected_point,
-                                        row, matched_stereo_frames_folder, scale_factor)
-            except Exception as e:
-                print(f"Error saving anomaly plot for frame {row['frame_no']}: {e}")
+
+            # save anomaly reprojection plots in a separate folder 
+            plot_projection_anomaly(cam1_reprojected_point, cam2_reprojected_point,
+                                    row, matched_stereo_frames_folder, scale_factor)
         else:
             anomaly_detected = False
             valid_detections += 1
-            try:
-                # plot the 2D points extracted from the 3D points to visualise how close they are with respect to the
-                # original ball in the frame image
-                plot_projections_valid(cam1_reprojected_point, cam2_reprojected_point,
-                                    row, matched_stereo_frames_folder, scale_factor)
-            except Exception as e:
-                print(f"Error saving valid plot for frame {row['frame_no']}: {e}")
+            # plot the 2D points extracted from the 3D points to visualise how close they are with respect to the
+            # original ball in the frame image
+            plot_projections_valid(cam1_reprojected_point, cam2_reprojected_point,
+                                   row, matched_stereo_frames_folder, scale_factor)
 
         # update CSV file with the new data
         points_3d_str = str(points_3d.ravel().tolist())
@@ -267,8 +262,8 @@ def triangulate(
 
     # save the updated CSV file
     root = find_project_root()
-    detections_csv.to_csv(f"{root}/data/stereo_A_detections_triangulated.csv", index=False)
-    print(f"Saved to {root}/data/stereo_A_detections_triangulated.csv")
+    detections_csv.to_csv(f"{root}/data/stereo_detections_triangulated.csv", index=False)
+    print(f"Saved to {root}/data/stereo_detections_triangulated.csv")
 
     # average error in centimeters of the reprojected points with respect to the original points
     a1_average_cm_error, a2_average_cm_error = get_average_error_cm(detections_csv)
@@ -295,11 +290,11 @@ def triangulate(
 
 if __name__ == "__main__":
     root = find_project_root()
-    detections_path = f"{root}/data/stereo_A_detections.csv"
+    detections_path = f"{root}/data/stereo_detections.csv"
     detections_csv = pd.read_csv(detections_path)
     matched_stereo_frames_folder = f"{root}/matched_stereo_frames"
 
-    reprojected_frames = f"{root}/reprojected_frames_A"
+    reprojected_frames = f"{root}/reprojected_frames"
     if not os.path.exists(reprojected_frames):
         os.makedirs(reprojected_frames)
     else:
@@ -308,12 +303,12 @@ if __name__ == "__main__":
 
     # NOTE: get intrinsics and extrinsics parameters
     # get intrinsics parameters from json file
-    intrinsics_path = f"{root}/output/V2_intrinsic_params.json"
+    intrinsics_path = f"{root}/output/intrinsic_params.json"
     with open(intrinsics_path, 'r') as f:
         intrinsic_params = json.load(f)
 
     # get extrinsics parameters from json file
-    extrinsics_path = f"{root}/output/V2_stereo_params.json"
+    extrinsics_path = f"{root}/output/1_stereo_params.json"
     with open(extrinsics_path, 'r') as f:
         extrinsics = json.load(f)
 
@@ -360,6 +355,6 @@ if __name__ == "__main__":
     )
     pprint(results_data)
     # save results as json file
-    with open(f"{root}/output/triangulation_result_summary/V2_triangulation_A.json", 'w') as f:
+    with open(f"{root}/output/triangulation_results_3.json", 'w') as f:
         json.dump(results_data, f)
     print("triangulation done")
