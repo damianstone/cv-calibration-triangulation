@@ -125,6 +125,8 @@ if __name__ == "__main__":
     base_folder = f"{root}/images/STEREOS"
     videos_base_path = f"{root}/videos/STEREOS"
     
+    # all videos are in 30fps
+    # resolution: 3840x2160 = 4k
     cam_1 = f"{videos_base_path}/STEREO_A/1_cam_extrinsic.mp4"
     cam_2 = f"{videos_base_path}/STEREO_A/2_cam_extrinsic.mp4"
     
@@ -150,6 +152,6 @@ if __name__ == "__main__":
             output_dir=folder,
             pattern_size=chessboard_size,
             num_frames=200,
-            skip_seconds=0.5
+            skip_seconds=0.1
         )
         print(f"--------------------------- {cam_name} DONE ---------------------------")

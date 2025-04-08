@@ -338,7 +338,7 @@ if __name__ == "__main__":
     root = find_project_root()
     base_path = f"{root}/images/STEREOS"
     # Load intrinsic parameters computed previously
-    intrinsic_path = os.path.join(root, "output", "2_intrinsic_params.json")
+    intrinsic_path = os.path.join(root, "output", "intrinsic_params.json")
     with open(intrinsic_path, "r") as f:
         intrinsics = json.load(f)
 
