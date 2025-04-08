@@ -4,10 +4,11 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.widgets import Slider
 
+
 # ---------------------
 # Load CSV and Process
 # ---------------------
-df = pd.read_csv("data/stereo_detections_triangulated.csv").head(25)
+df = pd.read_csv("data/stereo_detections_triangulated_with_smooth.csv").head(90).tail(45)
 
 # Ensure 'anomaly_detected' is treated as boolean
 # df['anomaly_detected'] = df['anomaly_detected'].astype(str) == 'True'
@@ -25,12 +26,19 @@ df = pd.read_csv("data/stereo_detections_triangulated.csv").head(25)
 offset_to_origin = np.array([10.4, -6.8, 1.7])
 
 # Parse the 3D position strings and convert from mm to meters
-trajectory = df['position_3d_pixels'].apply(lambda s: np.array(eval(s)) / 1000.0)
+trajectory = df['position_3d_pixels_smooth'].apply(lambda s: np.array(eval(s)) / 1000.0)
 trajectory = np.vstack(trajectory.values)
 
 x = -trajectory[:, 2] + offset_to_origin[0]  # Horizontal position (court width)
 y = trajectory[:, 0] + offset_to_origin[1]  # Court length
 z = -(trajectory[:, 1]) + offset_to_origin[2]  # Height above court
+
+original_trajectory = df['position_3d_pixels'].apply(lambda s: np.array(eval(s)) / 1000.0)
+original_trajectory = np.vstack(original_trajectory.values)
+
+x_orig = -original_trajectory[:, 2] + offset_to_origin[0]
+y_orig = original_trajectory[:, 0] + offset_to_origin[1]
+z_orig = -(original_trajectory[:, 1]) + offset_to_origin[2]
 
 # ---------------------
 # Court Geometry
@@ -88,7 +96,10 @@ plot_tennis_court(ax)
 
 scatter_container = [None]
 scatter_container[0] = ax.scatter(x, y, z, c=z, cmap="autumn_r", edgecolor="k", s=50, label="Trajectory Points")
-(line,) = ax.plot(x, y, z, color="red", label="Path")
+
+(line_smooth,) = ax.plot(x, y, z, color="red", label="Smoothed Path")
+(line_orig,) = ax.plot(x_orig, y_orig, z_orig, color="blue", label="Original Path", linestyle='--')
+
 
 ax.set_zlim(0, 8)
 ax.set_xlim(-offset_x, offset_x)
@@ -115,11 +126,15 @@ def update(val):
     new_scatter = ax.scatter(x[:idx], y[:idx], z[:idx],
                              c=z[:idx], cmap="autumn_r",
                              edgecolor="k", s=50)
-    line.set_data(x[:idx], y[:idx])
-    line.set_3d_properties(z[:idx])
-    scatter_container[0] = new_scatter
-    slider.valtext.set_text(f"{idx}/{len(x)}")  # Update frame count
-    fig.canvas.draw_idle()
+    line_smooth.set_data(x[:idx], y[:idx])
+    line_smooth.set_3d_properties(z[:idx])
 
+    line_orig.set_data(x_orig[:idx], y_orig[:idx])
+    line_orig.set_3d_properties(z_orig[:idx])
+
+    scatter_container[0] = new_scatter
+    slider.valtext.set_text(f"{idx}/{len(x)}")
+    fig.canvas.draw_idle()
+    
 slider.on_changed(update)
 plt.show()
