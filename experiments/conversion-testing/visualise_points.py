@@ -8,7 +8,8 @@ from matplotlib.widgets import Slider
 # ---------------------
 # Load CSV and Process
 # ---------------------
-df = pd.read_csv("data/stereo_detections_triangulated_with_smooth.csv").head(90).tail(45)
+df = pd.read_csv("data/stereo_detections_triangulated_with_smooth.csv")
+# df = pd.read_csv("data/stereo_detections_triangulated.csv")
 
 # Ensure 'anomaly_detected' is treated as boolean
 # df['anomaly_detected'] = df['anomaly_detected'].astype(str) == 'True'
@@ -23,7 +24,7 @@ df = pd.read_csv("data/stereo_detections_triangulated_with_smooth.csv").head(90)
 # 1011 is return
 
 # offset_to_origin = np.array([-5.7, -3.0, 1.7]) # Apply after converting pixels to metres
-offset_to_origin = np.array([10.4, -6.8, 1.7])
+offset_to_origin = np.array([8.4, -6.8, 1.7])
 
 # Parse the 3D position strings and convert from mm to meters
 trajectory = df['position_3d_pixels_smooth'].apply(lambda s: np.array(eval(s)) / 1000.0)
