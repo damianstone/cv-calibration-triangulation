@@ -68,7 +68,7 @@ def calibrate_camera_from_folder(folder, chessboard_size, square_size_mm):
     # how exact we want to be find the corners of each square in the chessboard
     # 30 = max number of iterations
     # 0.001 = stop if the change in the corner position is less than 0.001 - convergence threshold
-    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
+    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 50, 0.001)
 
     # create 3D points of the chessboard corners
     # each row represents a coordinate of a corner of the chessboard
@@ -103,7 +103,7 @@ def calibrate_camera_from_folder(folder, chessboard_size, square_size_mm):
             # store the same object for each image
             objpoints.append(objp)
             # get all the coordinates of the corners
-            corners = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), criteria)
+            corners = cv2.cornerSubPix(gray, corners, (5, 5), (-1, -1), criteria)
             # append the corners to the imgpoints list
             imgpoints.append(corners)
 
@@ -135,7 +135,7 @@ def calibrate_camera_from_folder(folder, chessboard_size, square_size_mm):
         T,
         K,
         D,
-        threshold=0.1,
+        threshold=0.06, # 0.7 work the best
     )
     count_after = len(filtered_obj)
     if count_after >= 3:
@@ -187,8 +187,8 @@ def save_intrinsics_to_json(intrinsics_dict, output_path):
 
 def process_intrinsic(base_folder, output_path, chessboard_size, square_size_mm):
     cameras = {
-        # "CAM_1": os.path.join(base_folder, "STEREO_A/CAMERA_1", "intrinsic_frames"),
-        # "CAM_2": os.path.join(base_folder, "STEREO_A/CAMERA_2", "intrinsic_frames"),
+        "CAM_1": os.path.join(base_folder, "STEREO_A/CAMERA_1", "intrinsic_frames"),
+        "CAM_2": os.path.join(base_folder, "STEREO_A/CAMERA_2", "intrinsic_frames"),
         "CAM_3": os.path.join(base_folder, "STEREO_B/CAMERA_3", "intrinsic_frames"),
         "CAM_4": os.path.join(base_folder, "STEREO_B/CAMERA_4", "intrinsic_frames")
     }
@@ -230,7 +230,7 @@ def process_intrinsic(base_folder, output_path, chessboard_size, square_size_mm)
 if __name__ == "__main__":
     root = find_project_root()
     base_path = f"{root}/images/STEREOS"
-    output_path = f"{root}/output/2_intrinsic_params.json"
+    output_path = f"{root}/output/V2_intrinsic_params.json"
     chessboard_size = (9, 6)
     square_size_mm = 60
     process_intrinsic(base_path, output_path, chessboard_size, square_size_mm)

@@ -65,7 +65,7 @@ def save_stereo_maps(
     root = find_project_root()
     # Create a FileStorage object to write data into an XML file
     cv_file = cv2.FileStorage(
-        f'{root}/output/{stereo_name}_rectification_params_2.xml', cv2.FILE_STORAGE_WRITE)
+        f'{root}/output/{stereo_name}_rectification_params.xml', cv2.FILE_STORAGE_WRITE)
 
     # Write the stereo map components (for both left and right)
     cv_file.write(f"{cam_left_name}_map_x", stereo_map_left[0])
@@ -99,8 +99,14 @@ def check_frame_size(img, expected_size=None):
     return expected_size
 
 
-def detect_chessboard(frame, pattern_size, winSize, criteria):
+def detect_chessboard(frame, pattern_size):
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    # adjust the corner refinement parameters to use a smaller window and stricter convergence criteria,
+    # improving precision in corner localization.
+    # This yields more accurate chessboard points and lower calibration errors
+    winSize = (5, 5)
+    zeroZone = (-1, -1)
+    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 50, 0.001)
     # use adaptive threshold and normalization flags for better detection
     flags = cv2.CALIB_CB_ADAPTIVE_THRESH | cv2.CALIB_CB_NORMALIZE_IMAGE
     ret, corners = cv2.findChessboardCorners(gray, pattern_size, flags)
@@ -137,8 +143,8 @@ def stereo_calibration(
     flags |= cv2.CALIB_FIX_INTRINSIC
 
     # iteration stopping criteria
-    # 30 iterations or until the change in the parameters is less than 0.001
-    criteria_stereo = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
+    # 50 iterations or until the change in the parameters is less than 0.001
+    criteria_stereo = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 50, 0.001)
 
     # stereoCalibrate
     # R = rotation matrix
@@ -235,12 +241,6 @@ def calibrate_stereo_from_folder(
     objp[:, :2] = np.mgrid[0:chessboard_size[0], 0:chessboard_size[1]].T.reshape(-1, 2)
     objp *= square_size_mm
 
-    # adjust the corner refinement parameters to use a smaller window and stricter convergence criteria,
-    # improving precision in corner localization.
-    # This yields more accurate chessboard points and lower calibration errors
-    winSize = (5, 5)
-    zeroZone = (-1, -1)
-    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 50, 0.001)
     expected_size = None
     i = 0
     for subfolder in tqdm(subfolders, desc="Processing folders"):
@@ -260,9 +260,9 @@ def calibrate_stereo_from_folder(
         gray_right = cv2.cvtColor(right_img, cv2.COLOR_BGR2GRAY)
 
         ret_left, corners_left = detect_chessboard(
-            left_img, chessboard_size, winSize, criteria)
+            left_img, chessboard_size)
         ret_right, corners_right = detect_chessboard(
-            right_img, chessboard_size, winSize, criteria)
+            right_img, chessboard_size)
 
         if ret_left and ret_right:
             # compute error for each image individually using solvePnP
@@ -338,26 +338,26 @@ if __name__ == "__main__":
     root = find_project_root()
     base_path = f"{root}/images/STEREOS"
     # Load intrinsic parameters computed previously
-    intrinsic_path = os.path.join(root, "output", "intrinsic_params.json")
+    intrinsic_path = os.path.join(root, "output", "V2_intrinsic_params.json")
     with open(intrinsic_path, "r") as f:
         intrinsics = json.load(f)
 
     chessboard_size = (9, 6)
     square_size_mm = 60
 
-    # STEREO A
-    # stereo_a_folder = os.path.join(base_path, "STEREO_A", "stereo_frames")
-    # stereo_a_params = calibrate_stereo_from_folder(
-    #     cam_left_name="CAM_1",
-    #     cam_right_name="CAM_2",
-    #     folder=stereo_a_folder,
-    #     chessboard_size=chessboard_size,
-    #     square_size_mm=square_size_mm,
-    #     intrinsic_left=intrinsics["CAM_1"],
-    #     intrinsic_right=intrinsics["CAM_2"]
-    # )
+    # NOTE: STEREO A in 60fps and 4K
+    stereo_a_folder = os.path.join(base_path, "STEREO_A", "stereo_frames")
+    stereo_a_params = calibrate_stereo_from_folder(
+        cam_left_name="CAM_1",
+        cam_right_name="CAM_2",
+        folder=stereo_a_folder,
+        chessboard_size=chessboard_size,
+        square_size_mm=square_size_mm,
+        intrinsic_left=intrinsics["CAM_1"],
+        intrinsic_right=intrinsics["CAM_2"]
+    )
 
-    # STEREO B
+    # NOTE: STEREO B in 60fps and 4K
     stereo_b_folder = os.path.join(base_path, "STEREO_B", "stereo_frames")
     stereo_b_params = calibrate_stereo_from_folder(
         cam_left_name="CAM_3",
@@ -370,10 +370,10 @@ if __name__ == "__main__":
     )
 
     stereo_params = {
-        # "STEREO_A": stereo_a_params,
+        "STEREO_A": stereo_a_params,
         "STEREO_B": stereo_b_params
     }
 
-    output_path = os.path.join(root, "output", "3_stereo_b_params.json")
+    output_path = os.path.join(root, "output", "2_stereo_params.json")
     save_json(stereo_params, output_path)
     print("Stereo calibration parameters saved")

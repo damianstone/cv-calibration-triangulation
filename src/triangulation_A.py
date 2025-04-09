@@ -267,8 +267,8 @@ def triangulate(
 
     # save the updated CSV file
     root = find_project_root()
-    detections_csv.to_csv(f"{root}/data/stereo_detections_triangulated.csv", index=False)
-    print(f"Saved to {root}/data/stereo_detections_triangulated.csv")
+    detections_csv.to_csv(f"{root}/data/stereo_A_detections_triangulated.csv", index=False)
+    print(f"Saved to {root}/data/stereo_A_detections_triangulated.csv")
 
     # average error in centimeters of the reprojected points with respect to the original points
     a1_average_cm_error, a2_average_cm_error = get_average_error_cm(detections_csv)
@@ -308,12 +308,12 @@ if __name__ == "__main__":
 
     # NOTE: get intrinsics and extrinsics parameters
     # get intrinsics parameters from json file
-    intrinsics_path = f"{root}/output/intrinsic_params.json"
+    intrinsics_path = f"{root}/output/V2_intrinsic_params.json"
     with open(intrinsics_path, 'r') as f:
         intrinsic_params = json.load(f)
 
     # get extrinsics parameters from json file
-    extrinsics_path = f"{root}/output/1_stereo_params.json"
+    extrinsics_path = f"{root}/output/V2_stereo_params.json"
     with open(extrinsics_path, 'r') as f:
         extrinsics = json.load(f)
 
@@ -360,6 +360,6 @@ if __name__ == "__main__":
     )
     pprint(results_data)
     # save results as json file
-    with open(f"{root}/output/3_triangulation_A.json", 'w') as f:
+    with open(f"{root}/output/triangulation_result_summary/V2_triangulation_A.json", 'w') as f:
         json.dump(results_data, f)
     print("triangulation done")

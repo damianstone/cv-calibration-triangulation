@@ -22,14 +22,18 @@ def find_project_root(marker=".gitignore"):
 
 def detect_chessboard(frame, pattern_size):
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    flags = cv2.CALIB_CB_ADAPTIVE_THRESH | cv2.CALIB_CB_NORMALIZE_IMAGE
+    
+    # Use additional flags for more robust detection
+    flags = (cv2.CALIB_CB_ADAPTIVE_THRESH | 
+             cv2.CALIB_CB_NORMALIZE_IMAGE)
+    
     ret, corners = cv2.findChessboardCorners(gray, pattern_size, flags)
     if ret:
-        # more iterations = improve accuracy 
+        # more iterations = improve accuracy
         # lower epsilon = higher precision
         criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 50, 0.001)
         # more window size = less accurate but detect more frames
-        corners = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), criteria)
+        corners = cv2.cornerSubPix(gray, corners, (5, 5), (-1, -1), criteria)
     return ret, corners
 
 
@@ -57,16 +61,16 @@ def process_stereo_videos(
     # open both video files
     cam_1_cap = cv2.VideoCapture(cam_1)
     cam_2_cap = cv2.VideoCapture(cam_2)
-    
+
     cam_1_fps = cam_1_cap.get(cv2.CAP_PROP_FPS)
     cam_2_fps = cam_2_cap.get(cv2.CAP_PROP_FPS)
-    
+
     cam_1_total_frames = int(cam_1_cap.get(cv2.CAP_PROP_FRAME_COUNT))
     cam_2_total_frames = int(cam_2_cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    
+
     cam_1_duration = int(cam_1_total_frames / cam_1_fps)
     cam_2_duration = int(cam_2_total_frames / cam_2_fps)
-    
+
     duration_seconds = min(cam_1_duration, cam_2_duration)
 
     detected_pairs = []
@@ -75,10 +79,10 @@ def process_stereo_videos(
     for sec in np.arange(0, duration_seconds):
         cam_1_frame_no = int(sec * cam_1_fps)
         cam_2_frame_no = int(sec * cam_2_fps)
-        
+
         cam_1_cap.set(cv2.CAP_PROP_POS_FRAMES, cam_1_frame_no)
         cam_2_cap.set(cv2.CAP_PROP_POS_FRAMES, cam_2_frame_no)
-        
+
         ret_cam_1, cam_1_frame = cam_1_cap.read()
         ret_cam_2, cam_2_frame = cam_2_cap.read()
 
@@ -92,7 +96,7 @@ def process_stereo_videos(
         if found_cam_1 and found_cam_2:
             detected_pairs.append((cam_1_frame_no, cam_1_frame, cam_2_frame_no, cam_2_frame))
             print("Synchronized chessboard pair found:", len(detected_pairs))
-
+            
     cam_1_cap.release()
     cam_2_cap.release()
 
@@ -107,13 +111,13 @@ def process_stereo_videos(
     for idx, (cam_1_frame_no, cam_1_frame, cam_2_frame_no, cam_2_frame) in enumerate(selected_pairs):
         pair_folder = os.path.join(output_dir, f"{idx:03d}")
         os.makedirs(pair_folder, exist_ok=True)
-        
+
         cam_1_path = os.path.join(pair_folder, f"cam_1.png")
         cam_2_path = os.path.join(pair_folder, f"cam_2.png")
-        
+
         cv2.imwrite(cam_1_path, cam_1_frame, [cv2.IMWRITE_PNG_COMPRESSION, 0])
         cv2.imwrite(cam_2_path, cam_2_frame, [cv2.IMWRITE_PNG_COMPRESSION, 0])
-        
+
         print(f"Saved pair {idx}: left frame {cam_1_frame_no}, right frame {cam_2_frame_no}")
 
     print("Total pairs detected:", len(detected_pairs))
@@ -124,20 +128,23 @@ if __name__ == "__main__":
     root = find_project_root()
     base_folder = f"{root}/images/STEREOS"
     videos_base_path = f"{root}/videos/STEREOS"
-    
-    # all videos are in 30fps
+
+    # NOTE: STEREO A in 30fps
     # resolution: 3840x2160 = 4k
     cam_1 = f"{videos_base_path}/STEREO_A/1_cam_extrinsic.mp4"
     cam_2 = f"{videos_base_path}/STEREO_A/2_cam_extrinsic.mp4"
-    
-    cam_3 = f"{videos_base_path}/STEREO_B/3_cam_extrinsic.mp4"
-    cam_4 = f"{videos_base_path}/STEREO_B/4_cam_extrinsic.mp4"
 
-    stereos = [(cam_1, cam_2), (cam_3, cam_4)]
+    # NOTE: STEREO B in 30fps
+    # resolution: 1920x1080
+    cam_3 = f"{videos_base_path}/STEREO_B/output.mov"
+    cam_4 = f"{videos_base_path}/STEREO_B/4_cam.mov"
+
+    # stereos = [(cam_1, cam_2), (cam_3, cam_4)]
+    stereos = [(cam_3, cam_4)]
 
     cameras_output_paths = {
-        "STEREO_A": os.path.join(base_folder, "STEREO_A", "stereo_frames"),
-        "STEREO_B": os.path.join(base_folder, "STEREO_B", "stereo_frames"),
+        # "STEREO_A": os.path.join(base_folder, "STEREO_A", "stereo_frames"),
+        "STEREO_B": os.path.join(base_folder, "STEREO_B", "stereo_frames_v2"),
     }
 
     # pattern variables
