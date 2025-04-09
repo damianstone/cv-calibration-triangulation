@@ -135,7 +135,7 @@ def calibrate_camera_from_folder(folder, chessboard_size, square_size_mm):
         T,
         K,
         D,
-        threshold=0.06, # 0.7 work the best
+        threshold=0.06, # 0.6 work the best
     )
     count_after = len(filtered_obj)
     if count_after >= 3:
