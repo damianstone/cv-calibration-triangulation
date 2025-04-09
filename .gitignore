@@ -7,3 +7,6 @@ images**
 images/
 output/**/*.xml
 matched_stereo_frames/
+reprojected_frames/
+reprojected_frames_A/
+reprojected_frames_B/
