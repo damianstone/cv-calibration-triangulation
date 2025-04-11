@@ -18,6 +18,9 @@ def find_project_root(marker=".gitignore"):
     raise FileNotFoundError(
         f"Project root marker '{marker}' not found starting from {current}")
 
+def save_intrinsics_to_json(intrinsics_dict, output_path):
+    with open(output_path, "w") as f:
+        json.dump(intrinsics_dict, f, indent=4)
 
 def compute_reprojection_error(object_points, image_points, rvecs, tvecs, camera_matrix, dist_coeffs):
     """
@@ -178,11 +181,6 @@ def calibrate_camera_from_folder(folder, chessboard_size, square_size_mm):
         (width, height)
     )
     return K, D, error, count_before, count_after, NEW_K, roi
-
-
-def save_intrinsics_to_json(intrinsics_dict, output_path):
-    with open(output_path, "w") as f:
-        json.dump(intrinsics_dict, f, indent=4)
 
 
 def process_intrinsic(base_folder, output_path, chessboard_size, square_size_mm):

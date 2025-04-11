@@ -103,11 +103,10 @@ def get_projection_matrices(
     """
     The origin for points is the center of the camera 1
     """
-    # Camera 1's projection matrix
     P1 = np.dot(K_cam1_undistort, np.hstack((np.eye(3), np.zeros((3, 1)))))
-    R2 = np.array(stereo_rotation_matrix)  # Rotation matrix from stereo extrinsics
-    T2 = np.array(stereo_translation_vector)  # Translation vector from stereo extrinsics
-    P2 = np.dot(K_cam2_undistort, np.hstack((R2, T2)))  # Camera 2's projection matrix
+    R2 = np.array(stereo_rotation_matrix)
+    T2 = np.array(stereo_translation_vector)
+    P2 = np.dot(K_cam2_undistort, np.hstack((R2, T2)))
     return P1, P2
 
 
