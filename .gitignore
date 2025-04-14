@@ -7,3 +7,4 @@ images**
 images/
 output/**/*.xml
 matched_stereo_frames/
+global_matched_frames/

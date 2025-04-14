@@ -106,7 +106,7 @@ def get_projection_matrices(
     P1 = np.dot(K_cam1_undistort, np.hstack((np.eye(3), np.zeros((3, 1)))))
     R2 = np.array(stereo_rotation_matrix)
     T2 = np.array(stereo_translation_vector)
-    P2 = np.dot(K_cam2_undistort, np.hstack((R2, T2))) 
+    P2 = np.dot(K_cam2_undistort, np.hstack((R2, T2)))
     return P1, P2
 
 
@@ -143,6 +143,8 @@ def preprocess_detections(detections_csv, threshold=0.3):
     # count how many detections are in the csv file (how many rows)
     detections = detections_csv.copy()
     previous_detection_count = len(detections)
+    # Convert frame_no to integer
+    detections['frame_no'] = detections['frame_no'].astype(int)
     # order detections by frame number
     detections = detections.sort_values(by='frame_no')
     # if A1_confidence or A2_confidence is less than 0.4, remove the detection
@@ -178,11 +180,13 @@ def get_error_cm(error1, error2, cam1_fx, cam2_fx, points_3d):
 
 
 def triangulate(
+    triangulated_detections_path,
     scale_factor,
     pixel_threshold,
     confidence_threshold,
     detections_csv,
     matched_stereo_frames_folder,
+    reprojected_frames_folder,
     Fx_cam1,
     K_cam1_undistort,
     D_cam1,
@@ -240,7 +244,7 @@ def triangulate(
             try:
                 # save anomaly reprojection plots in a separate folder
                 plot_projection_anomaly(cam1_reprojected_point, cam2_reprojected_point,
-                                        row, matched_stereo_frames_folder, scale_factor)
+                                        row, matched_stereo_frames_folder, reprojected_frames_folder, scale_factor)
             except Exception as e:
                 print(f"Error saving anomaly plot for frame {row['frame_no']}: {e}")
         else:
@@ -250,7 +254,7 @@ def triangulate(
                 # plot the 2D points extracted from the 3D points to visualise how close they are with respect to the
                 # original ball in the frame image
                 plot_projections_valid(cam1_reprojected_point, cam2_reprojected_point,
-                                    row, matched_stereo_frames_folder, scale_factor)
+                                       row, matched_stereo_frames_folder, reprojected_frames_folder, scale_factor)
             except Exception as e:
                 print(f"Error saving valid plot for frame {row['frame_no']}: {e}")
 
@@ -266,9 +270,8 @@ def triangulate(
         detections_csv.at[index, 'anomaly_detected'] = anomaly_detected
 
     # save the updated CSV file
-    root = find_project_root()
-    detections_csv.to_csv(f"{root}/data/stereo_B_detections_triangulated.csv", index=False)
-    print(f"Saved to {root}/data/stereo_B_detections_triangulated.csv")
+    detections_csv.to_csv(triangulated_detections_path, index=False)
+    print(f"Saved to {triangulated_detections_path}")
 
     # average error in centimeters of the reprojected points with respect to the original points
     b1_average_cm_error, b2_average_cm_error = get_average_error_cm(detections_csv)
@@ -295,16 +298,17 @@ def triangulate(
 
 if __name__ == "__main__":
     root = find_project_root()
-    detections_path = f"{root}/data/stereo_B_detections.csv"
+    detections_path = f"{root}/data/global_B.csv"
     detections_csv = pd.read_csv(detections_path)
-    matched_stereo_frames_folder = f"{root}/matched_stereo_frames"
+    matched_stereo_frames_folder = f"{root}/global_matched_frames"
+    triangulated_detections_path = f"{root}/data/global_B_triangulated.csv"
+    reprojected_frames_folder = f"{root}/reprojected_global_B"
 
-    reprojected_frames = f"{root}/reprojected_frames_B"
-    if not os.path.exists(reprojected_frames):
-        os.makedirs(reprojected_frames)
+    if not os.path.exists(reprojected_frames_folder):
+        os.makedirs(reprojected_frames_folder)
     else:
-        shutil.rmtree(reprojected_frames)
-        os.makedirs(reprojected_frames)
+        shutil.rmtree(reprojected_frames_folder)
+        os.makedirs(reprojected_frames_folder)
 
     # NOTE: get intrinsics and extrinsics parameters
     # get intrinsics parameters from json file
@@ -342,13 +346,15 @@ if __name__ == "__main__":
     # threshold to detect anomalies
     # if the error between the original and the reprojected point is greater than this threshold,
     # we consider the detection as an anomaly
-    pixel_threshold = 60  # 60px = 30cm approx
+    pixel_threshold = 80  # 80px = 30cm approx
     results_data = triangulate(
+        triangulated_detections_path,
         scale_factor,
         pixel_threshold,
         confidence_threshold,
         detections_csv,
         matched_stereo_frames_folder,
+        reprojected_frames_folder,
         Fx_cam1,
         K_cam1_undistort,
         D_cam1,
@@ -360,6 +366,6 @@ if __name__ == "__main__":
     )
     pprint(results_data)
     # save results as json file
-    with open(f"{root}/output/triangulation_result_summary/V2_triangulation_B.json", 'w') as f:
+    with open(f"{root}/output/triangulation_result_summary/global_triangulation_B.json", 'w') as f:
         json.dump(results_data, f)
     print("triangulation done")
