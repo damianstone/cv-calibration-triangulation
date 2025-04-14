@@ -1,12 +1,12 @@
 {
   "confidence_threshold": 0.2,
-  "pixel_threshold": 60,
+  "pixel_threshold": 80,
   "total_raw_set": 76,
   "total_filtered_set": 53,
-  "valid_detections": 36,
-  "percentage_valid_detections": 67.92,
-  "B1_average_cm_error": 5.55,
-  "B2_average_cm_error": 6.64,
-  "B1_threshold_cm": 20.61,
-  "B2_threshold_cm": 21.26
+  "valid_detections": 39,
+  "percentage_valid_detections": 73.58,
+  "B1_average_cm_error": 6.36,
+  "B2_average_cm_error": 7.9,
+  "B1_threshold_cm": 27.48,
+  "B2_threshold_cm": 28.35
 }

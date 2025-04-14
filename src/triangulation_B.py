@@ -24,8 +24,9 @@ def plot_projections_valid(
         cam2_reprojected_point,
         row_data,
         matched_stereo_frames_folder,
+        reprojected_frames_folder,
         scale_factor):
-    frame_no = row_data['frame_no']
+    frame_no = int(row_data['frame_no'])
     frame_folder = f"{matched_stereo_frames_folder}/frame_{frame_no}"
     cam1_frame = f"{frame_folder}/3_{frame_no}.jpg"
     cam2_frame = f"{frame_folder}/4_{frame_no}.jpg"
@@ -51,7 +52,7 @@ def plot_projections_valid(
     cam3_with_point = plot_reprojected_point(cam1_frame, cam1_reprojected_point)
     cam4_with_point = plot_reprojected_point(cam2_frame, cam2_reprojected_point)
 
-    save_folder = f"{root}/reprojected_frames_B/valid/frame_{frame_no}"
+    save_folder = f"{reprojected_frames_folder}/valid/frame_{frame_no}"
     os.makedirs(save_folder, exist_ok=True)
     cv2.imwrite(f"{save_folder}/cam3.jpg", cam3_with_point)
     cv2.imwrite(f"{save_folder}/cam4.jpg", cam4_with_point)
@@ -62,8 +63,9 @@ def plot_projection_anomaly(
         cam2_reprojected_point,
         row_data,
         matched_stereo_frames_folder,
+        reprojected_frames_folder,
         scale_factor):
-    frame_no = row_data['frame_no']
+    frame_no = int(row_data['frame_no'])
     frame_folder = f"{matched_stereo_frames_folder}/frame_{frame_no}"
     cam1_frame = f"{frame_folder}/3_{frame_no}.jpg"
     cam2_frame = f"{frame_folder}/4_{frame_no}.jpg"
@@ -89,7 +91,7 @@ def plot_projection_anomaly(
     cam3_with_point = plot_reprojected_point(cam1_frame, cam1_reprojected_point)
     cam4_with_point = plot_reprojected_point(cam2_frame, cam2_reprojected_point)
 
-    save_folder = f"{root}/reprojected_frames_B/anomalies/frame_{frame_no}"
+    save_folder = f"{reprojected_frames_folder}/anomalies/frame_{frame_no}"
     os.makedirs(save_folder, exist_ok=True)
     cv2.imwrite(f"{save_folder}/cam3.jpg", cam3_with_point)
     cv2.imwrite(f"{save_folder}/cam4.jpg", cam4_with_point)
