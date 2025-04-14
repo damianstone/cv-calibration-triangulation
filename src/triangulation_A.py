@@ -178,7 +178,7 @@ def compute_reprojection_error(points_3d, P1, P2, undistorted_point_camera_1, un
 
 
 def get_error_cm(error1, error2, cam1_fx, cam2_fx, points_3d):
-    Z = points_3d[2][0]  # depth in mm
+    Z = points_3d[2][0]
     error1_cm = (error1 * Z) / (cam1_fx * 10)
     error2_cm = (error2 * Z) / (cam2_fx * 10)
     return error1_cm, error2_cm
