@@ -24,10 +24,9 @@ def save_intrinsics_to_json(intrinsics_dict, output_path):
 
 def compute_reprojection_error(object_points, image_points, rvecs, tvecs, camera_matrix, dist_coeffs):
     """
-    how close our predicted positions of the chessboard corners are to where they actually appear in the picture. 
-    if the difference is small, it means our calibration are very accurate
-    
-    rule = less than 1.0 is good 
+    The reprojection error measures the distance between the detected chessboard corners
+    and their corresponding projected positions using the estimated camera parameters.
+    It serves as a quality metric for the camera calibration process.
     """
     total_error = 0
     total_points = 0
@@ -40,14 +39,19 @@ def compute_reprojection_error(object_points, image_points, rvecs, tvecs, camera
     return np.sqrt(total_error / total_points)
 
 
-def filter_images_by_error(objpoints, imgpoints, rvecs, tvecs, K, D, threshold):
+def filter_images_by_error(objpoints, imgpoints, rvecs, tvecs, K, D, reprojection_error_threshold):
+    """
+    The function projects 3D points onto the image plane using the camera parameters
+    and compares them with the detected 2D points. Images with reprojection error
+    below the threshold are kept, others are filtered out.
+    """
     filtered_obj = []
     filtered_img = []
     filtered_indices = []
     for i in range(len(objpoints)):
         projected, _ = cv2.projectPoints(objpoints[i], rvecs[i], tvecs[i], K, D)
         error = cv2.norm(imgpoints[i], projected, cv2.NORM_L2) / len(objpoints[i])
-        if error < threshold:
+        if error < reprojection_error_threshold:
             filtered_obj.append(objpoints[i])
             filtered_img.append(imgpoints[i])
             filtered_indices.append(i)
@@ -120,13 +124,16 @@ def calibrate_camera_from_folder(folder, chessboard_size, square_size_mm):
 
     # cv2.destroyAllWindows()
     count_before = len(objpoints)
-    # original intrinsic parameters
+
+
     # ret = reprojection error
     # K = intrinsic matrix
-    # D = distortion coefficients -> how much the lens bends the image (q tanto curva la imagen el lente)
+    # D = distortion coefficients
     # R = rotation vectors
     # T = translation vectors
     ret, K, D, R, T = cv2.calibrateCamera(objpoints, imgpoints, frame_size, None, None)
+    
+    
     height, width, channels = img.shape
     initial_error = compute_reprojection_error(objpoints, imgpoints, R, T, K, D)
 
@@ -141,7 +148,7 @@ def calibrate_camera_from_folder(folder, chessboard_size, square_size_mm):
         threshold=0.06, # 0.6 work the best
     )
     count_after = len(filtered_obj)
-    if count_after >= 3:
+    if count_after >= 10:
         ret, K, D, R, T = cv2.calibrateCamera(
             filtered_obj, 
             filtered_img, 

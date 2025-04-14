@@ -100,14 +100,14 @@ def check_frame_size(img, expected_size=None):
 
 
 def detect_chessboard(frame, pattern_size):
+    """
+    Detects chessboard corners in an image with sub-pixel accuracy.
+    Uses adaptive thresholding and image normalization for robust detection
+    across different lighting conditions.
+    """
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    # adjust the corner refinement parameters to use a smaller window and stricter convergence criteria,
-    # improving precision in corner localization.
-    # This yields more accurate chessboard points and lower calibration errors
     winSize = (5, 5)
-    zeroZone = (-1, -1)
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 50, 0.001)
-    # use adaptive threshold and normalization flags for better detection
     flags = cv2.CALIB_CB_ADAPTIVE_THRESH | cv2.CALIB_CB_NORMALIZE_IMAGE
     ret, corners = cv2.findChessboardCorners(gray, pattern_size, flags)
     if ret:
@@ -133,13 +133,9 @@ def stereo_calibration(
     D_right,
     image_size,
 ):
-    """
-    Use the original K and D parameters to calibrate the stereo pair (intrinsics)
-    """
     # flags control how the calibration works
     flags = 0
-    # CALIB_FIX_INTRINSIC -> not change the intrinsic parameters we already calculated
-    # meaning we only want to calibrate how the cameras relate to each other not recalibrate them individually
+    # not change the intrinsic parameters we already calculated
     flags |= cv2.CALIB_FIX_INTRINSIC
 
     # iteration stopping criteria
@@ -252,7 +248,6 @@ def calibrate_stereo_from_folder(
         left_img = cv2.imread(left_img_path)
         right_img = cv2.imread(right_img_path)
 
-        # NOTE: alernt if there is a different frame size
         expected_size = check_frame_size(left_img, expected_size)
         expected_size = check_frame_size(right_img, expected_size)
 

@@ -101,7 +101,10 @@ def get_projection_matrices(
         stereo_rotation_matrix,
         stereo_translation_vector):
     """
-    The origin for points is the center of the camera 1
+    Computes the projection matrices for stereo triangulation.
+    Camera 1 is set as the world coordinate system origin. Its projection matrix
+    is computed using identity rotation and zero translation, while camera 2's
+    projection matrix incorporates the stereo transformation parameters.
     """
     P1 = np.dot(K_cam1_undistort, np.hstack((np.eye(3), np.zeros((3, 1)))))
     R2 = np.array(stereo_rotation_matrix)
