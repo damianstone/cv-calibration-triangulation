@@ -8,3 +8,4 @@ pyav
 scipy
 pandas
 scikit-learn
+seaborn

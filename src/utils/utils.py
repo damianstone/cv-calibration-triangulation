@@ -23,9 +23,16 @@ def get_frame_size(image_path_pattern):
     return (width, height)
 
 
-def detect_chessboard(frame, pattern_size, winSize, criteria):
+def detect_chessboard(frame):
+    """
+    Detects chessboard corners in an image with sub-pixel accuracy.
+    Uses adaptive thresholding and image normalization for robust detection
+    across different lighting conditions.
+    """
+    pattern_size = (9, 6)
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    # use adaptive threshold and normalization flags for better detection
+    winSize = (5, 5)
+    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 50, 0.001)
     flags = cv2.CALIB_CB_ADAPTIVE_THRESH | cv2.CALIB_CB_NORMALIZE_IMAGE
     ret, corners = cv2.findChessboardCorners(gray, pattern_size, flags)
     if ret:

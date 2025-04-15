@@ -29,7 +29,7 @@ def detect_chessboard(frame, pattern_size):
         # lower epsilon = higher precision
         criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 50, 0.001)
         # more window size = less accurate but detect more frames
-        corners = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), criteria)
+        corners = cv2.cornerSubPix(gray, corners, (5, 5), (-1, -1), criteria)
     return ret, corners
 
 def select_uniform_frames(frames_list, n):
@@ -106,11 +106,11 @@ if __name__ == "__main__":
     videos = [cam_1, cam_2, cam_3, cam_4]
     
     cameras_output_paths = {
-        "CAM_1": os.path.join(base_folder, "STEREO_A/CAMERA_1", "intrinsic_frames"),
-        "CAM_2": os.path.join(base_folder, "STEREO_A/CAMERA_2", "intrinsic_frames"),
+        "CAM_1": os.path.join(base_folder, "STEREO_A/CAMERA_1", "V2_intrinsic_frames"),
+        "CAM_2": os.path.join(base_folder, "STEREO_A/CAMERA_2", "V2_intrinsic_frames"),
         
-        "CAM_3": os.path.join(base_folder, "STEREO_B/CAMERA_3", "intrinsic_frames"),
-        "CAM_4": os.path.join(base_folder, "STEREO_B/CAMERA_4", "intrinsic_frames")
+        "CAM_3": os.path.join(base_folder, "STEREO_B/CAMERA_3", "V2_intrinsic_frames"),
+        "CAM_4": os.path.join(base_folder, "STEREO_B/CAMERA_4", "V2_intrinsic_frames")
     }
     
     # pattern variables

@@ -18,9 +18,11 @@ def find_project_root(marker=".gitignore"):
     raise FileNotFoundError(
         f"Project root marker '{marker}' not found starting from {current}")
 
+
 def save_intrinsics_to_json(intrinsics_dict, output_path):
     with open(output_path, "w") as f:
         json.dump(intrinsics_dict, f, indent=4)
+
 
 def compute_reprojection_error(object_points, image_points, rvecs, tvecs, camera_matrix, dist_coeffs):
     """
@@ -39,7 +41,7 @@ def compute_reprojection_error(object_points, image_points, rvecs, tvecs, camera
     return np.sqrt(total_error / total_points)
 
 
-def filter_images_by_error(objpoints, imgpoints, rvecs, tvecs, K, D, reprojection_error_threshold):
+def filter_images_by_error(objpoints, imgpoints, rvecs, tvecs, K, D, threshold):
     """
     The function projects 3D points onto the image plane using the camera parameters
     and compares them with the detected 2D points. Images with reprojection error
@@ -51,14 +53,51 @@ def filter_images_by_error(objpoints, imgpoints, rvecs, tvecs, K, D, reprojectio
     for i in range(len(objpoints)):
         projected, _ = cv2.projectPoints(objpoints[i], rvecs[i], tvecs[i], K, D)
         error = cv2.norm(imgpoints[i], projected, cv2.NORM_L2) / len(objpoints[i])
-        if error < reprojection_error_threshold:
+        if error < threshold:
             filtered_obj.append(objpoints[i])
             filtered_img.append(imgpoints[i])
             filtered_indices.append(i)
     return filtered_obj, filtered_img, filtered_indices
 
 
-def calibrate_camera_from_folder(folder, chessboard_size, square_size_mm):
+def save_filtered_images(initial_imgs, filtered_indices, folder):
+    filtered_folder = os.path.join(os.path.dirname(
+        folder), "filtered_" + os.path.basename(folder))
+
+    if os.path.exists(filtered_folder):
+        shutil.rmtree(filtered_folder)
+
+    if not os.path.exists(filtered_folder):
+        os.makedirs(filtered_folder)
+
+    for idx in filtered_indices:
+        src = initial_imgs[idx]
+        dest = os.path.join(filtered_folder, os.path.basename(src))
+        shutil.copy2(src, dest)
+
+
+def detect_chessboard(frame, pattern_size, windSize=(5, 5), with_flags=True):
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    f = (cv2.CALIB_CB_ADAPTIVE_THRESH |
+         cv2.CALIB_CB_NORMALIZE_IMAGE)
+    flags = f if with_flags else None
+    ret, corners = cv2.findChessboardCorners(gray, pattern_size, flags)
+    if ret:
+        criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 50, 0.001)
+        corners = cv2.cornerSubPix(gray, corners, windSize, (-1, -1), criteria)
+    return ret, corners
+
+
+def calibrate_camera_from_folder(
+    folder,
+    chessboard_size,
+    square_size_mm,
+    threshold,
+    windSize,
+    with_flags,
+    apply_filtering=True,
+    debug_mode=False,
+):
     """
     Go over all images in a folder, detect chessboard corners, and run camera calibration.
     Returns the camera matrix, distortion coefficients, reprojection error, and image count.
@@ -71,11 +110,6 @@ def calibrate_camera_from_folder(folder, chessboard_size, square_size_mm):
         return None, None, None, 0
 
     frame_size = get_frame_size(images[0])
-
-    # how exact we want to be find the corners of each square in the chessboard
-    # 30 = max number of iterations
-    # 0.001 = stop if the change in the corner position is less than 0.001 - convergence threshold
-    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 50, 0.001)
 
     # create 3D points of the chessboard corners
     # each row represents a coordinate of a corner of the chessboard
@@ -102,29 +136,13 @@ def calibrate_camera_from_folder(folder, chessboard_size, square_size_mm):
     i = 0
     for cam_img in images:
         img = cv2.imread(cam_img)
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        # find the chessboard corners
-        ret, corners = cv2.findChessboardCorners(gray, chessboard_size, None)
-        # if corners are found, add object points, image points (after refining them)
+        ret, corners = detect_chessboard(img, chessboard_size, windSize, with_flags)
         if ret:
-            # store the same object for each image
             objpoints.append(objp)
-            # get all the coordinates of the corners
-            corners = cv2.cornerSubPix(gray, corners, (5, 5), (-1, -1), criteria)
-            # append the corners to the imgpoints list
             imgpoints.append(corners)
-
-            # HERE IS HOW I'M STORING IMAGES
             initial_imgs.append(cam_img)
-        # if i < 3:
-        #     cv2.drawChessboardCorners(img, chessboard_size, corners, ret)
-        #     print_image(img)
-        #     i += 1
-        #     cv2.waitKey(1000)
 
-    # cv2.destroyAllWindows()
     count_before = len(objpoints)
-
 
     # ret = reprojection error
     # K = intrinsic matrix
@@ -132,49 +150,38 @@ def calibrate_camera_from_folder(folder, chessboard_size, square_size_mm):
     # R = rotation vectors
     # T = translation vectors
     ret, K, D, R, T = cv2.calibrateCamera(objpoints, imgpoints, frame_size, None, None)
-    
-    
+
     height, width, channels = img.shape
     initial_error = compute_reprojection_error(objpoints, imgpoints, R, T, K, D)
 
-    # NOTE: compute reprojection error and remove outliers from the overall calibration
-    filtered_obj, filtered_img, filtered_indices = filter_images_by_error(
-        objpoints,
-        imgpoints,
-        R,
-        T,
-        K,
-        D,
-        threshold=0.06, # 0.6 work the best
-    )
-    count_after = len(filtered_obj)
-    if count_after >= 10:
-        ret, K, D, R, T = cv2.calibrateCamera(
-            filtered_obj, 
-            filtered_img, 
-            frame_size, 
-            None, 
-            None
+    if apply_filtering:
+        filtered_obj, filtered_img, filtered_indices = filter_images_by_error(
+            objpoints,
+            imgpoints,
+            R,
+            T,
+            K,
+            D,
+            threshold=threshold,  # 0.6 work the best
         )
-        error = compute_reprojection_error(filtered_obj, filtered_img, R, T, K, D)
+        count_after = len(filtered_obj)
+        if count_after >= 10:
+            ret, K, D, R, T = cv2.calibrateCamera(
+                filtered_obj,
+                filtered_img,
+                frame_size,
+                None,
+                None
+            )
+            error = compute_reprojection_error(filtered_obj, filtered_img, R, T, K, D)
+            # NOTE: save filtered images used to achieve the reprojection error - debugging purposes
+            if debug_mode:
+                save_filtered_images(initial_imgs, filtered_indices, folder)
+        else:
+            raise Exception("Not enough images after filtering; using initial calibration error")
     else:
+        count_after = count_before
         error = initial_error
-        print("Not enough images after filtering; using initial calibration error")
-
-    # NOTE: save filtered images used to achieve the reprojection error - debugging purposes
-    filtered_folder = os.path.join(os.path.dirname(folder), "filtered_" + os.path.basename(folder))
-    
-    # if folder exist, remove the content inside
-    if os.path.exists(filtered_folder):
-        shutil.rmtree(filtered_folder)
-        
-    if not os.path.exists(filtered_folder):
-        os.makedirs(filtered_folder)
-        
-    for idx in filtered_indices:
-        src = initial_imgs[idx]
-        dest = os.path.join(filtered_folder, os.path.basename(src))
-        shutil.copy2(src, dest)
 
     # NOTE: this is not necessary for the intrinsics or calibration in general, save them just in case
     # new camera matrix for undistortion, useful to test the original intrinsic parameters
@@ -190,7 +197,7 @@ def calibrate_camera_from_folder(folder, chessboard_size, square_size_mm):
     return K, D, error, count_before, count_after, NEW_K, roi
 
 
-def process_intrinsic(base_folder, output_path, chessboard_size, square_size_mm):
+def process_intrinsic(base_folder, output_path, chessboard_size, square_size_mm, threshold, windSize, with_flags):
     cameras = {
         "CAM_1": os.path.join(base_folder, "STEREO_A/CAMERA_1", "intrinsic_frames"),
         "CAM_2": os.path.join(base_folder, "STEREO_A/CAMERA_2", "intrinsic_frames"),
@@ -200,9 +207,12 @@ def process_intrinsic(base_folder, output_path, chessboard_size, square_size_mm)
     intrinsics = {}
     for cam_name, folder in cameras.items():
         K, D, error, count_before, count_after, NEW_K, roi = calibrate_camera_from_folder(
-            folder, 
-            chessboard_size, 
-            square_size_mm
+            folder,
+            chessboard_size,
+            square_size_mm,
+            threshold=threshold,
+            windSize=windSize,
+            with_flags=with_flags
         )
 
         if K is None:
@@ -238,4 +248,8 @@ if __name__ == "__main__":
     output_path = f"{root}/output/V2_intrinsic_params.json"
     chessboard_size = (9, 6)
     square_size_mm = 60
-    process_intrinsic(base_path, output_path, chessboard_size, square_size_mm)
+    threshold = 0.6
+    windSize = (5, 5)
+    with_flags = True
+    process_intrinsic(base_path, output_path, chessboard_size,
+                      square_size_mm, threshold, windSize, with_flags)
