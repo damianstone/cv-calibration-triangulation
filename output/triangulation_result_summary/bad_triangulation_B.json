@@ -1,0 +1,12 @@
+{
+  "confidence_threshold": 0.2,
+  "pixel_threshold": 60,
+  "total_raw_set": 320,
+  "total_filtered_set": 205,
+  "valid_detections": 75,
+  "percentage_valid_detections": 36.59,
+  "B1_average_cm_error": 17.21,
+  "B2_average_cm_error": 17.77,
+  "B1_threshold_cm": 30.01,
+  "B2_threshold_cm": 30.56
+}

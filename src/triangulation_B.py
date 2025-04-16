@@ -300,11 +300,11 @@ def triangulate(
 
 if __name__ == "__main__":
     root = find_project_root()
-    detections_path = f"{root}/data/global_B.csv"
+    detections_path = f"{root}/data/stereo_B_detections.csv"
     detections_csv = pd.read_csv(detections_path)
-    matched_stereo_frames_folder = f"{root}/global_matched_frames"
-    triangulated_detections_path = f"{root}/data/global_B_triangulated.csv"
-    reprojected_frames_folder = f"{root}/reprojected_global_B"
+    matched_stereo_frames_folder = f"{root}/matched_stereo_frames"
+    triangulated_detections_path = f"{root}/data/stereo_B_triangulated.csv"
+    reprojected_frames_folder = f"{root}/bad_reprojected_stereo_B"
 
     if not os.path.exists(reprojected_frames_folder):
         os.makedirs(reprojected_frames_folder)
@@ -314,12 +314,12 @@ if __name__ == "__main__":
 
     # NOTE: get intrinsics and extrinsics parameters
     # get intrinsics parameters from json file
-    intrinsics_path = f"{root}/output/V2_intrinsic_params.json"
+    intrinsics_path = f"{root}/output/intrinsic_params.json"
     with open(intrinsics_path, 'r') as f:
         intrinsic_params = json.load(f)
 
     # get extrinsics parameters from json file
-    extrinsics_path = f"{root}/output/V2_stereo_params.json"
+    extrinsics_path = f"{root}/output/stereo_params.json"
     with open(extrinsics_path, 'r') as f:
         extrinsics = json.load(f)
 
@@ -348,7 +348,7 @@ if __name__ == "__main__":
     # threshold to detect anomalies
     # if the error between the original and the reprojected point is greater than this threshold,
     # we consider the detection as an anomaly
-    pixel_threshold = 80  # 80px = 30cm approx
+    pixel_threshold = 60  # 80px = 30cm approx
     results_data = triangulate(
         triangulated_detections_path,
         scale_factor,
@@ -368,6 +368,6 @@ if __name__ == "__main__":
     )
     pprint(results_data)
     # save results as json file
-    with open(f"{root}/output/triangulation_result_summary/global_triangulation_B.json", 'w') as f:
+    with open(f"{root}/output/triangulation_result_summary/bad_triangulation_B.json", 'w') as f:
         json.dump(results_data, f)
     print("triangulation done")
