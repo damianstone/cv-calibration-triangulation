@@ -99,14 +99,14 @@ def check_frame_size(img, expected_size=None):
     return expected_size
 
 
-def detect_chessboard(frame, pattern_size):
+def detect_chessboard(frame, pattern_size, window_size):
     """
     Detects chessboard corners in an image with sub-pixel accuracy.
     Uses adaptive thresholding and image normalization for robust detection
     across different lighting conditions.
     """
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    winSize = (5, 5)
+    winSize = window_size
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 50, 0.001)
     flags = cv2.CALIB_CB_ADAPTIVE_THRESH | cv2.CALIB_CB_NORMALIZE_IMAGE
     ret, corners = cv2.findChessboardCorners(gray, pattern_size, flags)
@@ -217,9 +217,12 @@ def calibrate_stereo_from_folder(
         square_size_mm,
         intrinsic_left,
         intrinsic_right,
-        error_threshold=0.1):
+        error_threshold=0.1,
+        window_size=(15, 15),
+        allow_filtering=True,
+        debug_mode=False
+        ):
     
-    # extrinsics parameters for stereo calibration
     K_left = np.array(intrinsic_left["K"])
     K_left_undistort = np.array(intrinsic_left["K_undistort"])
     D_left = np.array(intrinsic_left["D"])
@@ -254,10 +257,8 @@ def calibrate_stereo_from_folder(
         gray_left = cv2.cvtColor(left_img, cv2.COLOR_BGR2GRAY)
         gray_right = cv2.cvtColor(right_img, cv2.COLOR_BGR2GRAY)
 
-        ret_left, corners_left = detect_chessboard(
-            left_img, chessboard_size)
-        ret_right, corners_right = detect_chessboard(
-            right_img, chessboard_size)
+        ret_left, corners_left = detect_chessboard(left_img, chessboard_size, window_size)
+        ret_right, corners_right = detect_chessboard(right_img, chessboard_size, window_size)
 
         if ret_left and ret_right:
             # compute error for each image individually using solvePnP
@@ -266,23 +267,19 @@ def calibrate_stereo_from_folder(
             avg_error = (error_l + error_r) / 2.0
 
             # keep the pair if error is below threshold
-            if avg_error < error_threshold:
+            if allow_filtering:
+                if avg_error < error_threshold:
+                    objpoints.append(objp)
+                    imgpoints_left.append(corners_left)
+                    imgpoints_right.append(corners_right)
+                    filtered_image_paths.append((left_img_path, right_img_path))
+            else:
                 objpoints.append(objp)
                 imgpoints_left.append(corners_left)
                 imgpoints_right.append(corners_right)
-                filtered_image_paths.append((left_img_path, right_img_path))
-
-            # if i < 5:
-            #     cv2.drawChessboardCorners(left_img, chessboard_size, corners_left, ret_left)
-            #     cv2.drawChessboardCorners(right_img, chessboard_size, corners_right, ret_right)
-            #     print_image(left_img)
-            #     print_image(right_img)
-            #     i += 1
-            #     cv2.waitKey(1000)
 
     if len(objpoints) < 3:
         raise Exception("Not enough valid pairs for stereo calibration")
-
 
     image_size = gray_left.shape[::-1]
     # stereo calibration to get the rotation matrix and translation vector
@@ -295,15 +292,17 @@ def calibrate_stereo_from_folder(
     print(f"VALID PAIRS -> {len(objpoints)} REPROJECTION ERROR -> {round(ret, 3)}")
 
     # stereo rectification to align the cameras
-    stereo_map_left, stereo_map_right, proj_matrix_left, proj_matrix_right, Q, roi_l, roi_r = stereo_rectification(
-        K_left_undistort, D_left, K_right_undistort, D_right,
-        image_size,
-        R,
-        T,
-    )
+    if debug_mode:
+        stereo_map_left, stereo_map_right, proj_matrix_left, proj_matrix_right, Q, roi_l, roi_r = stereo_rectification(
+            K_left_undistort, D_left, K_right_undistort, D_right,
+            image_size,
+            R,
+            T,
+        )
     
-    try: 
-        save_stereo_maps(
+    if debug_mode:
+        try: 
+            save_stereo_maps(
             cam_left_name,
             cam_right_name,
             stereo_map_left,
@@ -311,13 +310,14 @@ def calibrate_stereo_from_folder(
             proj_matrix_left,
             proj_matrix_right,
             Q, roi_l, roi_r)
-    except:
-        raise "error saving stereo maps"
+        except:
+            raise "error saving stereo maps"
     
-    try:
-        save_filtered_pairs(filtered_image_paths, folder)
-    except:
-        raise "error saving stereo pairs"
+    if debug_mode:
+        try:
+            save_filtered_pairs(filtered_image_paths, folder)
+        except:
+            raise "error saving stereo pairs"
 
     return {
         "rotation_matrix": R.tolist(),
@@ -325,7 +325,8 @@ def calibrate_stereo_from_folder(
         "essential_matrix": E.tolist(),
         "fundamental_matrix": F.tolist(),
         "reprojection_error": ret,
-        "num_valid_pairs": len(objpoints)
+        "frame_pairs_before": len(subfolders),
+        "frame_pairs_after": len(objpoints),
     }
 
 
