@@ -60,7 +60,7 @@ def plot_2d_reprojected_points(triangulation_results, stereo='A', camera_names=[
     plt.show()
 
 
-def plot_valid_vs_original(triangulation_results, stereo='A', camera_names=['Camera 1', 'Camera 2']):
+def plot_valid_vs_original(triangulation_results, stereo='A', camera_names=['Camera 1', 'Camera 2'], fontsize=20):
     """
     Plot the original 2D YOLO points vs triangulated 2D points
     The idea is to see how accurate the triangulation is.
@@ -90,9 +90,10 @@ def plot_valid_vs_original(triangulation_results, stereo='A', camera_names=['Cam
                     original_2d_1[~anomaly_mask, 1], c='blue', alpha=0.6, label='Original')
         ax1.scatter(points_2d_1[~anomaly_mask, 0], points_2d_1[~anomaly_mask,
                     1], c='red', alpha=0.6, label='Reprojected')
-        ax1.set_title(f'{camera_names[0]}: Original vs Reprojected (Valid Points)')
-        ax1.set_xlabel('X')
-        ax1.set_ylabel('Y')
+        ax1.set_title(
+            f'{camera_names[0]}: Original vs Reprojected (Valid Points)', fontsize=fontsize)
+        ax1.set_xlabel('X', fontsize=15)
+        ax1.set_ylabel('Y', fontsize=15)
         ax1.legend()
         ax1.grid(True)
 
@@ -101,9 +102,10 @@ def plot_valid_vs_original(triangulation_results, stereo='A', camera_names=['Cam
                     original_2d_2[~anomaly_mask, 1], c='blue', alpha=0.6, label='Original')
         ax2.scatter(points_2d_2[~anomaly_mask, 0], points_2d_2[~anomaly_mask,
                     1], c='red', alpha=0.6, label='Reprojected')
-        ax2.set_title(f'{camera_names[1]}: Original vs Reprojected (Valid Points)')
-        ax2.set_xlabel('X')
-        ax2.set_ylabel('Y')
+        ax2.set_title(
+            f'{camera_names[1]}: Original vs Reprojected (Valid Points)', fontsize=fontsize)
+        ax2.set_xlabel('X', fontsize=15)
+        ax2.set_ylabel('Y', fontsize=15)
         ax2.legend()
         ax2.grid(True)
     else:
@@ -111,17 +113,16 @@ def plot_valid_vs_original(triangulation_results, stereo='A', camera_names=['Cam
                     original_2d_1[~anomaly_mask, 1], c='blue', alpha=0.6, label='Original')
         ax1.scatter(points_2d_1[~anomaly_mask, 0], points_2d_1[~anomaly_mask,
                     1], c='red', alpha=0.6, label='Reprojected')
-        ax1.set_title(f'{camera_names[0]}: Original vs Reprojected (Valid Points)')
-        ax1.set_xlabel('X')
-        ax1.set_ylabel('Y')
+        ax1.set_title(
+            f'{camera_names[0]}: Original vs Reprojected (Valid Points)', fontsize=fontsize)
+        ax1.set_xlabel('X', fontsize=15)
+        ax1.set_ylabel('Y', fontsize=15)
         ax1.legend()
         ax1.grid(True)
-
-    plt.tight_layout()
-    plt.show()
+    return fig
 
 
-def plot_anomaly_vs_original(triangulation_results, stereo='A', camera_names=['Camera 1', 'Camera 2']):
+def plot_anomaly_vs_original(triangulation_results, stereo='A', camera_names=['Camera 1', 'Camera 2'], fontsize=20):
     """
     Plot the original 2D YOLO points vs triangulated 2D points flagged as anomalies
     The idea to be able to see what we are flagging as anomalies
@@ -148,9 +149,10 @@ def plot_anomaly_vs_original(triangulation_results, stereo='A', camera_names=['C
                     original_2d_1[anomaly_mask, 1], c='blue', alpha=0.6, label='Original')
         ax1.scatter(points_2d_1[anomaly_mask, 0], points_2d_1[anomaly_mask,
                     1], c='red', alpha=0.6, label='Reprojected')
-        ax1.set_title(f'{camera_names[0]}: Original vs Reprojected (Anomalies)')
-        ax1.set_xlabel('X')
-        ax1.set_ylabel('Y')
+        ax1.set_title(
+            f'{camera_names[0]}: Original vs Reprojected (Anomalies)', fontsize=fontsize)
+        ax1.set_xlabel('X', fontsize=15)
+        ax1.set_ylabel('Y', fontsize=15)
         ax1.legend()
         ax1.grid(True)
 
@@ -159,9 +161,10 @@ def plot_anomaly_vs_original(triangulation_results, stereo='A', camera_names=['C
                     original_2d_2[anomaly_mask, 1], c='blue', alpha=0.6, label='Original')
         ax2.scatter(points_2d_2[anomaly_mask, 0], points_2d_2[anomaly_mask,
                     1], c='red', alpha=0.6, label='Reprojected')
-        ax2.set_title(f'{camera_names[1]}: Original vs Reprojected (Anomalies)')
-        ax2.set_xlabel('X')
-        ax2.set_ylabel('Y')
+        ax2.set_title(
+            f'{camera_names[1]}: Original vs Reprojected (Anomalies)', fontsize=fontsize)
+        ax2.set_xlabel('X', fontsize=15)
+        ax2.set_ylabel('Y', fontsize=15)
         ax2.legend()
         ax2.grid(True)
     else:
@@ -169,11 +172,10 @@ def plot_anomaly_vs_original(triangulation_results, stereo='A', camera_names=['C
                     original_2d_1[anomaly_mask, 1], c='blue', alpha=0.6, label='Original')
         ax1.scatter(points_2d_1[anomaly_mask, 0], points_2d_1[anomaly_mask,
                     1], c='red', alpha=0.6, label='Reprojected')
-        ax1.set_title(f'{camera_names[0]}: Original vs Reprojected (Anomalies)')
-        ax1.set_xlabel('X')
-        ax1.set_ylabel('Y')
+        ax1.set_title(
+            f'{camera_names[0]}: Original vs Reprojected (Anomalies)', fontsize=fontsize)
+        ax1.set_xlabel('X', fontsize=15)
+        ax1.set_ylabel('Y', fontsize=15)
         ax1.legend()
         ax1.grid(True)
-
-    plt.tight_layout()
-    plt.show()
+    return fig
