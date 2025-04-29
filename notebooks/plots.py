@@ -92,9 +92,9 @@ def plot_valid_vs_original(triangulation_results, stereo='A', camera_names=['Cam
                     1], c='red', alpha=0.6, label='Reprojected')
         ax1.set_title(
             f'{camera_names[0]}: Original vs Reprojected (Valid Points)', fontsize=fontsize)
-        ax1.set_xlabel('X', fontsize=15)
-        ax1.set_ylabel('Y', fontsize=15)
-        ax1.legend()
+        ax1.set_xlabel('X', fontsize=20)
+        ax1.set_ylabel('Y', fontsize=20)
+        ax1.legend(fontsize=20)
         ax1.grid(True)
 
         # Plot for camera 2
@@ -104,9 +104,9 @@ def plot_valid_vs_original(triangulation_results, stereo='A', camera_names=['Cam
                     1], c='red', alpha=0.6, label='Reprojected')
         ax2.set_title(
             f'{camera_names[1]}: Original vs Reprojected (Valid Points)', fontsize=fontsize)
-        ax2.set_xlabel('X', fontsize=15)
-        ax2.set_ylabel('Y', fontsize=15)
-        ax2.legend()
+        ax2.set_xlabel('X', fontsize=20)
+        ax2.set_ylabel('Y', fontsize=20)
+        ax2.legend(fontsize=20)
         ax2.grid(True)
     else:
         ax1.scatter(original_2d_1[~anomaly_mask, 0],
@@ -115,9 +115,9 @@ def plot_valid_vs_original(triangulation_results, stereo='A', camera_names=['Cam
                     1], c='red', alpha=0.6, label='Reprojected')
         ax1.set_title(
             f'{camera_names[0]}: Original vs Reprojected (Valid Points)', fontsize=fontsize)
-        ax1.set_xlabel('X', fontsize=15)
-        ax1.set_ylabel('Y', fontsize=15)
-        ax1.legend()
+        ax1.set_xlabel('X', fontsize=20)
+        ax1.set_ylabel('Y', fontsize=20)
+        ax1.legend(fontsize=20)
         ax1.grid(True)
     return fig
 
@@ -151,9 +151,9 @@ def plot_anomaly_vs_original(triangulation_results, stereo='A', camera_names=['C
                     1], c='red', alpha=0.6, label='Reprojected')
         ax1.set_title(
             f'{camera_names[0]}: Original vs Reprojected (Anomalies)', fontsize=fontsize)
-        ax1.set_xlabel('X', fontsize=15)
-        ax1.set_ylabel('Y', fontsize=15)
-        ax1.legend()
+        ax1.set_xlabel('X', fontsize=20)
+        ax1.set_ylabel('Y', fontsize=20)
+        ax1.legend(fontsize=20)
         ax1.grid(True)
 
         # Plot for camera 2
@@ -163,9 +163,9 @@ def plot_anomaly_vs_original(triangulation_results, stereo='A', camera_names=['C
                     1], c='red', alpha=0.6, label='Reprojected')
         ax2.set_title(
             f'{camera_names[1]}: Original vs Reprojected (Anomalies)', fontsize=fontsize)
-        ax2.set_xlabel('X', fontsize=15)
-        ax2.set_ylabel('Y', fontsize=15)
-        ax2.legend()
+        ax2.set_xlabel('X', fontsize=20)
+        ax2.set_ylabel('Y', fontsize=20)
+        ax2.legend(fontsize=20)
         ax2.grid(True)
     else:
         ax1.scatter(original_2d_1[anomaly_mask, 0],
@@ -174,8 +174,8 @@ def plot_anomaly_vs_original(triangulation_results, stereo='A', camera_names=['C
                     1], c='red', alpha=0.6, label='Reprojected')
         ax1.set_title(
             f'{camera_names[0]}: Original vs Reprojected (Anomalies)', fontsize=fontsize)
-        ax1.set_xlabel('X', fontsize=15)
-        ax1.set_ylabel('Y', fontsize=15)
-        ax1.legend()
+        ax1.set_xlabel('X', fontsize=20)
+        ax1.set_ylabel('Y', fontsize=20)
+        ax1.legend(fontsize=20)
         ax1.grid(True)
     return fig

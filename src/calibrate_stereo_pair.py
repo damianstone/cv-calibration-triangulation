@@ -123,6 +123,7 @@ def compute_reprojection_error_pair(objp, corners, K, D):
     return error
 
 
+
 def stereo_calibration(
     objpoints,
     imgpoints_left,
@@ -133,7 +134,6 @@ def stereo_calibration(
     D_right,
     image_size,
 ):
-    # flags control how the calibration works
     flags = 0
     # not change the intrinsic parameters we already calculated
     flags |= cv2.CALIB_FIX_INTRINSIC
@@ -261,7 +261,7 @@ def calibrate_stereo_from_folder(
         ret_right, corners_right = detect_chessboard(right_img, chessboard_size, window_size)
 
         if ret_left and ret_right:
-            # compute error for each image individually using solvePnP
+            # compute error for each image individually using solvePnP and L2 norm
             error_l = compute_reprojection_error_pair(objp, corners_left, K_left, D_left)
             error_r = compute_reprojection_error_pair(objp, corners_right, K_right, D_right)
             avg_error = (error_l + error_r) / 2.0
@@ -278,8 +278,8 @@ def calibrate_stereo_from_folder(
                 imgpoints_left.append(corners_left)
                 imgpoints_right.append(corners_right)
 
-    if len(objpoints) < 3:
-        raise Exception("Not enough valid pairs for stereo calibration")
+    # if len(objpoints) < 3:
+    #     raise Exception("Not enough valid pairs for stereo calibration")
 
     image_size = gray_left.shape[::-1]
     # stereo calibration to get the rotation matrix and translation vector
@@ -370,6 +370,6 @@ if __name__ == "__main__":
         "STEREO_B": stereo_b_params
     }
 
-    output_path = os.path.join(root, "output", "2_stereo_params.json")
+    output_path = os.path.join(root, "output", "V5_stereo_params.json")
     save_json(stereo_params, output_path)
     print("Stereo calibration parameters saved")

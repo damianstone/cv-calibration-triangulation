@@ -41,18 +41,32 @@ def compute_reprojection_error(object_points, image_points, rvecs, tvecs, camera
     return np.sqrt(total_error / total_points)
 
 
+# def filter_images_by_error(objpoints, imgpoints, rvecs, tvecs, K, D, threshold):
+#     """
+#     The function projects 3D points onto the image plane using the camera parameters
+#     and compares them with the detected 2D points. Images with reprojection error
+#     below the threshold are kept, others are filtered out.
+#     """
+#     filtered_obj = []
+#     filtered_img = []
+#     filtered_indices = []
+#     for i in range(len(objpoints)):
+#         projected, _ = cv2.projectPoints(objpoints[i], rvecs[i], tvecs[i], K, D)
+#         error = cv2.norm(imgpoints[i], projected, cv2.NORM_L2) / len(objpoints[i])
+#         if error < threshold:
+#             filtered_obj.append(objpoints[i])
+#             filtered_img.append(imgpoints[i])
+#             filtered_indices.append(i)
+#     return filtered_obj, filtered_img, filtered_indices
+
 def filter_images_by_error(objpoints, imgpoints, rvecs, tvecs, K, D, threshold):
-    """
-    The function projects 3D points onto the image plane using the camera parameters
-    and compares them with the detected 2D points. Images with reprojection error
-    below the threshold are kept, others are filtered out.
-    """
     filtered_obj = []
     filtered_img = []
     filtered_indices = []
     for i in range(len(objpoints)):
         projected, _ = cv2.projectPoints(objpoints[i], rvecs[i], tvecs[i], K, D)
-        error = cv2.norm(imgpoints[i], projected, cv2.NORM_L2) / len(objpoints[i])
+        # Calculate RMS error for this frame
+        error = np.sqrt(np.sum((imgpoints[i] - projected)**2) / len(objpoints[i]))
         if error < threshold:
             filtered_obj.append(objpoints[i])
             filtered_img.append(imgpoints[i])
@@ -128,12 +142,10 @@ def calibrate_camera_from_folder(
 
     objp = objp * square_size_mm
 
-    # Arrays to store object points and image points from all the images.
     objpoints = []  # 3d point in real world space
     imgpoints = []  # 2d points in image plane
     initial_imgs = []
 
-    i = 0
     for cam_img in images:
         img = cv2.imread(cam_img)
         ret, corners = detect_chessboard(img, chessboard_size, windSize, with_flags)
@@ -162,7 +174,7 @@ def calibrate_camera_from_folder(
             T,
             K,
             D,
-            threshold=threshold,  # 0.6 work the best
+            threshold=threshold,
         )
         count_after = len(filtered_obj)
         if count_after >= 10:
@@ -174,7 +186,6 @@ def calibrate_camera_from_folder(
                 None
             )
             error = compute_reprojection_error(filtered_obj, filtered_img, R, T, K, D)
-            # NOTE: save filtered images used to achieve the reprojection error - debugging purposes
             if debug_mode:
                 save_filtered_images(initial_imgs, filtered_indices, folder)
         else:
@@ -245,10 +256,10 @@ def process_intrinsic(base_folder, output_path, chessboard_size, square_size_mm,
 if __name__ == "__main__":
     root = find_project_root()
     base_path = f"{root}/images/STEREOS"
-    output_path = f"{root}/output/V2_intrinsic_params.json"
+    output_path = f"{root}/output/V5_intrinsic_params.json"
     chessboard_size = (9, 6)
     square_size_mm = 60
-    threshold = 0.6
+    threshold = 0.3
     windSize = (5, 5)
     with_flags = True
     process_intrinsic(base_path, output_path, chessboard_size,
